@@ -21,6 +21,12 @@ git-tree-sha1 = "74147e877531d7c172f70b492995bc2b5ca3a843"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 version = "0.9.10"
 
+[[Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.1"
+
 [[Chain]]
 git-tree-sha1 = "cac464e71767e8a04ceee82a889ca56502795705"
 uuid = "8be319e6-bccf-4806-a6f7-6fae938471bc"
@@ -111,6 +117,12 @@ version = "0.8.6"
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
+[[ExpDataSets]]
+deps = ["Measurements", "SplitApplyCombine"]
+path = "ExpDataSets"
+uuid = "502e9419-551d-40e3-9007-99df92d05256"
+version = "0.1.0"
+
 [[FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
 git-tree-sha1 = "2db648b6712831ecb333eae76dbfd1c156ca13bb"
@@ -180,12 +192,6 @@ git-tree-sha1 = "46b7834ec8165c541b0b5d1c8ba63ec940723ffb"
 uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 version = "0.4.15"
 
-[[Lazy]]
-deps = ["MacroTools"]
-git-tree-sha1 = "1370f8202dac30758f3c345f9909b97f53d87d3f"
-uuid = "50d2b5c4-7a5e-59d5-8109-a42b560f39c0"
-version = "0.15.1"
-
 [[LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
@@ -231,6 +237,12 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 [[MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
+
+[[Measurements]]
+deps = ["Calculus", "LinearAlgebra", "Printf", "RecipesBase", "Requires"]
+git-tree-sha1 = "31c8c0569b914111c94dd31149265ed47c238c5b"
+uuid = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
+version = "2.6.0"
 
 [[Missings]]
 deps = ["DataAPI"]
@@ -291,6 +303,11 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[Random]]
 deps = ["Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[RecipesBase]]
+git-tree-sha1 = "44a75aa7a527910ee3d1751d1f0e4148698add9e"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.1.2"
 
 [[Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"

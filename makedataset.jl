@@ -1,12 +1,6 @@
 # Make Data Set From CSV's 
 
-# include("utils.jl")
-# include("EventDataSets.jl")
-# include("DataTypes.jl")
-# include("neurodsp.jl")
-include("ROI.jl")
-
-using .ROI, DataFrames, Dates, CSV, FileIO, Glob, JLD2, DataFramesMeta, Chain, Random, StatsBase
+using ExpDataSets, Dates, CSV, FileIO, Glob, JLD2, Chain, Random, DataFrames, DataFramesMeta, StatsBase
 
 #= ################################
  !Make Trials Info Table  
@@ -55,6 +49,7 @@ files=glob("*.csv", "Data/CSV/lfp_data")
 files=files ∩ ("Data/CSV/lfp_data/".*event_info.file_id.*".csv")
 df = CSV.File(files;dateformat="yyyy-mm-dd")|>DataFrame
 df
+groupby(df, [:rat, :date, :filename])
 lfp_data = @chain df begin 
     # select(Not(:insula))
     groupby([:rat, :date, :filename])
@@ -66,6 +61,8 @@ lfp_data = @chain df begin
     @transform(@byrow :mob = filter_signal(:mob, "bandstop", (59, 61), "fir", 60, nothing, false))
     @transform(@byrow :ca2 = filter_signal(:ca2, "bandstop", (59, 61), "fir", 60, nothing, false))
 end
+
+
 
 
 #= ################################
@@ -136,5 +133,10 @@ alldata=merge(trials, events, lfps)
 
 ds=DataSet(alldata)
 
-save("Data/freeroam_dataset.jld2", "freeroam_dataset", ds)
+et = getEventTimeSeries(ds, ds.metatable["Event"].id)
+
+save("Data/freeroam_dataset.jld2", "freeroam_dataset", ds, "event_time_series", et)
+
+
+
 

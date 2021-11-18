@@ -1,0 +1,8 @@
+name = "ExpDataSets"
+uuid = "502e9419-551d-40e3-9007-99df92d05256"
+authors = ["lbreston <leo.breston@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
+SplitApplyCombine = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"

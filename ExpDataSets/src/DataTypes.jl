@@ -1,3 +1,5 @@
+using Measurements
+
 abstract type AbstractDataType end
 
 
@@ -21,6 +23,9 @@ function size(dt::AbstractArrayData)
     return size(values(dt))
 end
 
+
+
+
 # function (da::T)(axs...)  where T<:AbstractArrayData
 #     return T(da, axs)
 # end
@@ -35,7 +40,6 @@ end
 
 
 
-Dict([1,2,3].=> [4,5,6])
 
 
 

@@ -1,6 +1,6 @@
-abstract type AbstractDataSet end
-
 import SplitApplyCombine as SAC
+
+abstract type AbstractDataSet end
 
 function make_metatable(d)
     g=SAC.group(x->split(string(typeof(x)),'.')[end], values(d))
@@ -25,18 +25,21 @@ function getEventTimeSeries(ds::DataSet, eids; astable=true)
     lfp=[ds.data[l] for l in lfpids]
     E=[ds.data[i] for i in eids]
     # return   [filter(x->x ∋ ds.data[e], lfp) for e in events]
-    et=[]
-    ett=[]
+    etv=[]
+    # ett=[]
     for e in E
         for l in lfp
-            if l.file == e.file
-               push!(et, l)
-               push!(ett, e)
+            if e ∈ l
+                et=EventTimeSeries(e, l)
+                if !isartifact(et)
+                    push!(etv, et)
+                end
             end
         end
     end
     if astable
-        return leftjoin(DataFrame(id = map(x->x.id, ett), lfp = data.(et), region = map(x->x.region, et)), ds.metatable["Event"], on="id")
+        return leftjoin(DataFrame(event_id = map(x->x.event.id, etv), lfp_id= map(x->x.timeseries.id, etv), lfp = data.(etv), region = map(x->x.timeseries.region, etv)), ds.metatable["Event"], on=("event_id"=> "id"))
+        # return DataFrame(meta.(etv))|>x->@transform(x, lfp=data.(etv))
     else
         return et
     end

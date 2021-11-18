@@ -33,7 +33,7 @@ end
 function Base.:∈(i::AbstractDataInterval, d::AbstractDataSetObject) 
     if d.file != i.file
         return false
-    elseif (i.start_time ≥ start_time(d)) && (end_time(d) ≤ i.end_time)
+    elseif (start_time(i) ≥ start_time(d)) && (end_time(i) ≤ end_time(d))
         return true
     else
         return false
@@ -44,7 +44,7 @@ end
 function Base.:∋(i::AbstractDataSetObject, d::AbstractDataInterval) 
   if d.file != i.file
       return false
-  elseif (start_time(d) ≥ start_time(i)) && (end_time(i) ≤ end_time(d))
+  elseif (start_time(i) ≥ start_time(d)) && (end_time(i) ≤ end_time(d))
       return true
   else
       return false

@@ -1,11 +1,11 @@
 using Dates
 
 function findnearest(A::AbstractArray,t) 
-    findmin(abs(A-t))
+    return findmin(abs.(A.-t))[2]
 end
 
 function nearest(A::AbstractArray,t) 
-    A[findnearest(A,t)]
+    return A[findnearest(A,t)]
 end
 
 

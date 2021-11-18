@@ -18,7 +18,7 @@ end
 function data(l::LFP)
     return(l.data)
 end
-
+=>
 function source(l::LFP)
     return file
 end
@@ -34,6 +34,8 @@ end
 function end_time(l::LFP)
     return(end_time(l.data))
 end
+
+
 
 
 
@@ -67,6 +69,7 @@ end
 function source(n::NeuroPowerSpec)
     return(n.timeseries)
 end
+
 
 
 struct Session <: AbstractDataInterval
@@ -195,7 +198,7 @@ struct EventTimeSeries <: AbstractDataSetObject
     timeseries
 end
 
-function EventTimeSeries(e::Event, ts::ContinuousTimeSeries)
+function EventTimeSeries(e, ts)
     return EventTimeSeries(abs(rand(Int32)), e, ts)
 end
 
@@ -207,14 +210,31 @@ function data(et::EventTimeSeries)
     return(et.timeseries.data(start_time(et.event), end_time(et.event)))
 end
 
+function data(et::EventTimeSeries, pre, post)
+    return(et.timeseries.data(start_time(et.event)-pre, end_time(et.event)+post))
+end
+
 function source(et::EventTimeSeries)
     return nothing 
 end
 
 function meta(et::EventTimeSeries)
-    return (file=et.file, date=et.date, rat=et.rat, trial_type=et.trial_type, agent=et.agent, behavior=et.behavior, start_time=start_time(et.event), end_time=end_time(et.event))
+    e=et.event
+    return (file=e.file, date=e.date, rat=e.rat, trial_type=e.trial_type, agent=e.agent, behavior=e.behavior, start_time=start_time(e), end_time=end_time(e))
 end
 
+function isartifact(et::EventTimeSeries)
+    if et.timeseries.region=="mob" 
+        thresh=.75
+    else
+        thresh=.6
+    end
+    if any(values(data(et)).≥thresh)
+        return true
+    else
+        return false
+    end
+end
 
 
 
