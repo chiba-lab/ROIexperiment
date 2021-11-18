@@ -30,7 +30,7 @@ event_info = @chain df begin
     unique
 end
 
-event_info_null = event_info[sample(1:size(event_info,1),500),:]
+event_info_null = event_info[sample(1:size(event_info,1),200),:]
 event_info_null = @eachrow event_info_null begin
     shift=randn()*rand([1,-1])*10+20
     :onset = :onset + shift
@@ -97,7 +97,7 @@ event_info = @chain begin
     select(:event_id, :trial_id, :) 
 end
 
-@subset(event_info, :trial_id .== ismissing)
+# @subset(event_info, :trial_id .== ismissing)
 
 
 # ###################################

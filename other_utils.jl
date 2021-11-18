@@ -17,7 +17,7 @@ end
 # end
 
 function agent_ps_plot(bmps, nmps, b, r)
-    freqs=1:1:100 
+    freqs=2:2:120 
     s=@subset(bmps, :behavior.== b, :region .== lowercase(r))
     s=@orderby(s, :agent)
     ns=@subset(nmps, :region.== lowercase(r))
