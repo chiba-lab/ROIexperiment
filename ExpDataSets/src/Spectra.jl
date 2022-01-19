@@ -82,6 +82,12 @@ function binps(spec::PowerSpectrum, n=120, fmax=n)
     return PowerSpectrum(pb, leftedge)
 end
 
+using RollingFunctions
+
+function smoothps(spec::PowerSpectrum, window)
+    return PowerSpectrum(RollingFunctions.rollmean(spec.values, window),RollingFunctions.rollmean(spec.freqs,window))
+end
+
 # function  meanps(x::PowerSpectrum,y::PowerSpectrum)
 #     if x.freqs == y.freqs
 #         return PowerSpectrum(measurements((values(x).+values(y))/2), freqs(x))
@@ -89,4 +95,6 @@ end
 #         return nothing 
 #     end
 # end 
+
+
 

@@ -64,4 +64,8 @@ function sum_unique_subset_sums(k_max, n)
     return sum(sub_sums[coefs.==1])
 end
 
-sum_unique_subset_sums(100,50)   
+
+@time sum_unique_subset_sums(100,50)
+
+
+

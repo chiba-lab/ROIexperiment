@@ -17,7 +17,7 @@ module ExpDataSets
         copy!(spc, pyimport_conda("neurodsp.spectral", "neurodsp"))
     end
 
-    export AbstractArrayData,  DataSet, amp, filter_signal , id, source, AbstractDataInterval, Event, axes, findnearest,  spc, AbstractDataSet, LFP, bandpower,freqs, meta, start_time, AbstractDataSetObject, NeuroPowerSpec,compute_power_spectrum,  fstr2date, minstr2seconds,  times, AbstractDataSubset, PowerSpectrum, data, gendid, nearest, values, AbstractDataType, Session,  duration, genid, nearesttime, AbstractGroupedDataSet, Spectrum, end_time, getband,  phase, AbstractSpectrum, TimeSeries,  getintervalidx , power, AbstractTimeSeries, Trial, fbands, ContinuousTimeSeries, filt, ∈,  ∋, EventTimeSeries,  getEventTimeSeries, binps, normalize
+    export AbstractArrayData,  DataSet, amp, filter_signal , id, source, AbstractDataInterval, Event, axes, findnearest,  spc, AbstractDataSet, LFP, bandpower,freqs, meta, start_time, AbstractDataSetObject, NeuroPowerSpec,compute_power_spectrum,  fstr2date, minstr2seconds,  times, AbstractDataSubset, PowerSpectrum, data, gendid, nearest, values, AbstractDataType, Session,  duration, genid, nearesttime, AbstractGroupedDataSet, Spectrum, end_time, getband,  phase, AbstractSpectrum, TimeSeries,  getintervalidx , power, AbstractTimeSeries, Trial, fbands, ContinuousTimeSeries, filt, ∈,  ∋, EventTimeSeries,  getEventTimeSeries, binps, normalize, smoothps
 
 
     include("utils.jl")

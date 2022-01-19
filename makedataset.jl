@@ -37,6 +37,7 @@ event_info_null = @eachrow event_info_null begin
     :offset = :offset + shift
     :event_id = genid(:file_id,:onset,:offset)
     :behavior_type = "null"
+    :agent_type = "null"
 end
 
 event_info=vcat(event_info, event_info_null)
