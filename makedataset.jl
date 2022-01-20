@@ -5,7 +5,7 @@ using ExpDataSets, Dates, CSV, FileIO, Glob, JLD2, Chain, Random, DataFrames, Da
 #= ################################
  !Make Trials Info Table  
 ################################### =#
-files=["Data/CSV/behavioral_trials.csv"]
+files=["Data/CSV/trial_info/behavioral_trials.csv"]
 # files=glob("freeroam*", "Data/CSV/trial_info") 
 df = DataFrame.(CSV.File.(files;header=[:rat, :file_id, :start_time, :end_time, :trial_type,  :agent_type,:agent_1_novelty,:agent_2_novelty], missingstring=""))|>x->reduce(vcat, x)
 trial_info = @chain df begin 
@@ -19,11 +19,13 @@ end
 # #= ################################
 #  Make Event Info Table 
 # ################################### =#
-files=["Data/CSV/behavioral_events.csv"]
+files=["Data/CSV/event_info/behavioral_events.csv"]
 # files=glob("freeroam*", "Data/CSV/event_info") 
 df = DataFrame.(CSV.File.(files; header=[:rat, :file_id, :start_time, :end_time, :behavior_type, :subtype_1, :subtype_2, :subtype_3, :trial_type, :agent_type,:agent_1_novelty, :agent_2_novelty, :agent_1, :agent_2], missingstring=""))|>x->reduce(vcat, x)
 event_info = @chain df begin 
     transform(:file_id =>ByRow(fstr2date)=>:date)
+    transform(:start_time=> ByRow(minstr2seconds)=>:start_time)
+    transform(:end_time=> ByRow(minstr2seconds)=>:end_time)
     transform([:file_id, :start_time, :end_time] =>ByRow((x,y,z)->genid(x,y,z))=>:event_id)
     @select(:event_id, :file_id, :rat, :date, :start_time, :end_time,:behavior_type,:trial_type, :agent_type)
     DataFrames.rename(:start_time => :onset, :end_time => :offset)
@@ -135,7 +137,7 @@ ds=DataSet(alldata)
 
 et = getEventTimeSeries(ds, ds.metatable["Event"].id)
 
-save("Data/freeroam_dataset.jld2", "freeroam_dataset", ds, "event_time_series", et)
+save("Data/behavior_dataset.jld2", "behavior_dataset", ds, "event_time_series", et)
 
 
 
