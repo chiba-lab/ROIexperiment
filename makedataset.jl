@@ -21,13 +21,13 @@ end
 # ################################### =#
 files=["Data/CSV/event_info/behavioral_events.csv"]
 # files=glob("freeroam*", "Data/CSV/event_info") 
-df = DataFrame.(CSV.File.(files; header=[:rat, :file_id, :start_time, :end_time, :behavior_type, :subtype_1, :subtype_2, :subtype_3, :trial_type, :agent_type,:agent_1_novelty, :agent_2_novelty, :agent_1, :agent_2], missingstring=""))|>x->reduce(vcat, x)
+df = DataFrame.(CSV.File.(files; header=[:rat, :file_id, :start_time, :end_time, :duration, :empty1, :behavior_type, :subtype_1, :subtype_2, :subtype_3, :trial_type, :agent_type,:agent_1_novelty, :agent_2_novelty, :agent_1, :agent_2], missingstring=""))|>x->reduce(vcat, x)
 event_info = @chain df begin 
     transform(:file_id =>ByRow(fstr2date)=>:date)
     transform(:start_time=> ByRow(minstr2seconds)=>:start_time)
     transform(:end_time=> ByRow(minstr2seconds)=>:end_time)
     transform([:file_id, :start_time, :end_time] =>ByRow((x,y,z)->genid(x,y,z))=>:event_id)
-    @select(:event_id, :file_id, :rat, :date, :start_time, :end_time,:behavior_type,:trial_type, :agent_type)
+    @select(:event_id, :file_id, :rat, :date, :start_time, :end_time, :behavior_type, :trial_type, :agent_type)
     DataFrames.rename(:start_time => :onset, :end_time => :offset)
     unique
 end
