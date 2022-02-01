@@ -20,7 +20,7 @@ function source(s::AbstractDataSubset)
     return data(s)
 end
 
-function getEventTimeSeries(ds::DataSet, eids; astable=true)
+function getEventTimeSeries(ds::DataSet, eids; astable=true, pre=0, post=0)
     lfpids=ds.metatable["LFP"].id
     lfp=[ds.data[l] for l in lfpids]
     E=[ds.data[i] for i in eids]
@@ -38,7 +38,7 @@ function getEventTimeSeries(ds::DataSet, eids; astable=true)
         end
     end
     if astable
-        return leftjoin(DataFrame(event_id = map(x->x.event.id, etv), lfp_id= map(x->x.timeseries.id, etv), lfp = data.(etv), region = map(x->x.timeseries.region, etv)), ds.metatable["Event"], on=("event_id"=> "id"))
+        return leftjoin(DataFrame(event_id = map(x->x.event.id, etv), lfp_id= map(x->x.timeseries.id, etv), lfp = data.(etv, Ref(pre), Ref(post)), region = map(x->x.timeseries.region, etv)), ds.metatable["Event"], on=("event_id"=> "id"))
         # return DataFrame(meta.(etv))|>x->@transform(x, lfp=data.(etv))
     else
         return et
