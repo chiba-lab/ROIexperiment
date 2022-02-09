@@ -8,14 +8,16 @@ events = ROIexp[:behavioral_events]
 
 function get_event_lfp_recording(event, lfp)
     f1(l) = in_interval(event, l)
-    el = filter(x -> f1(x), lfp) 
+    el = filter(x -> f1(x), lfp)
     !isempty(el) ? el : missing
 end
 
-el = get_event_lfp_recording(events[500], lfp)
+amyglfp= filter(x -> x.region.name == "Amygdala", lfp)
+@chain events begin
+    filter(x -> x.behavior.name == "Immobility", _)
+    get_event_lfp_recording.(_, Ref(amyglfp))
+    filter(!ismissing, _)
+end
 
-Tree(el)
 
 
-
-events[2]
