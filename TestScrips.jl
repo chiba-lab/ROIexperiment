@@ -12,7 +12,9 @@ function get_event_lfp_recording(event, lfp)
     !isempty(el) ? el : missing
 end
 
-el = get_event_lfp_recording(events[300], lfp)
+el = get_event_lfp_recording(events[500], lfp)
+
+Tree(el)
 
 
 
