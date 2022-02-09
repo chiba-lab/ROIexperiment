@@ -1,28 +1,40 @@
-include("ROIontology.jl")
+include("./ROIontology.jl")
+using Glob
+
 
 files = glob("*.csv", "Data/CSV/lfp_data")
 tbls = [Table(CSV.File(f)) for f in files]
 r2r = Dict([(AMG, :amyg), (MOB, :mob), (CA2, :ca2), (INS, :insula)])
 t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]), t.time[1], t.time[end], Rat("EG7"), r, 1010.1, collect(getproperty(t, r2r[r])))
 lfpdata = map(x -> t2lfp.(tbls, Ref(x)), [AMG, MOB, CA2, INS])
-lfpdata=vcat(lfpdata...)
+lfpdata = vcat(lfpdata...)
 sessions = map(x -> x.session, lfpdata)
+unique!(sessions)
 
 condD = Dict([("EE", EE), ("Empty", EE), ("Freeroam", FR), ("Habituation", HBT), ("OF", OF), ("Interaction", ITR), ("Object", Object), ("Rat", Rat), ("Rat ", Rat), ("Robot", Robot), (missing, missing)])
+
 macro name2cond(C, T)
     :($C($T))
 end
 function sesfun(i)
-    f(j) = x -> x.filename == j
-    filter(f(i), sessions)
+    strs(x) = split(x, "_") |> x -> [x[1], parse.(Int, x[2:end])]
+    si = strs(i)
+    f(j) = x -> strs(x.filename) == j
+    s = filter(f(si), sessions)
+    if isempty(s)
+        return Session(i, missing, missing, missing)
+    else
+        return s[1]
+    end
 end
+sesfun("EG7_3_28_18")
 tt = Table(CSV.File("Data/CSV/trial_info/behavioral_trials.csv"; header = false))
 trials = map(x -> Trial(sesfun(x.Column2), x.Column3, x.Column4, (condD[x.Column5])(condD[x.Column6])), tt)
-
+trials
 function str2sec(str)
     a = split(str, ":")
     b = parse.(Ref(Float64), a)
-    b[1]u"minute" + b[2]u"s"
+    b[1] * 60 + b[2]
 end
 function str2date(str)
     a = split(str, "_")
@@ -34,11 +46,11 @@ function matchnovelty(x)
         return missing
     end
     if isequal(x.Category3, x.TrialType3)
-        return x.AgentName
+        return x.AgentName[1]
     elseif isequal(x.Category3, x.TrialType4)
-        return x.AgentName2
+        return x.AgentName2[1]
     else
-        return x.AgentName
+        return x.AgentName[1]
     end
 end
 function getreceiver(x)
@@ -60,12 +72,21 @@ et = Table(CSV.File("Data/CSV/event_info/behavioral_events_labeled_header.csv"))
 efilt = et[et.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility", "Sniff", "Top", "Approach", "Retreat"])]
 efilt_1 = efilt[efilt.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility"])]
 efilt_2 = efilt[efilt.EventType.∉Ref(["Groom", "Rear", "Baseline", "Immobility"])]
-b1 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), Behavior(x.EventType), Rat(x.RatName), Rat(x.RatName)), efilt_1)
-b2 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), x.EventType, Rat(x.RatName), getreceiver(x)), efilt_2)
+b1 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), Behavior(x.EventType), Rat(x.RatName), missing), efilt_1)
+b2 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), Behavior(x.EventType), Rat(x.RatName), getreceiver(x)), efilt_2)
+behavioral_events = vcat(b1, b2)
+behavioral_events
+# sessions = StructArray(sessions)
+# trials = StructArray(trials)
+# lfpdata = StructArray(lfpdata)
+# behavioral_events = StructArray(behavioral_events)
 
-behaviors= vcat(b1, b2)
+ROIexp = Dict([(:sessions, sessions), (:trials, trials), (:behavioral_events, behavioral_events), (:lfp_data, lfpdata)])
 
-ROIexp = Dict([(:sessions, StructArray(sessions)), (:trials, StructArray(trials)), (:behaviors, behaviors), (:lfp_recordings,StructArray(lfpdata))])
+
+
+
+
 
 save("./Data/ROIexp.jld2", "ROIexp", ROIexp)
 

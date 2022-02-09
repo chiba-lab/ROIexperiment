@@ -1,15 +1,15 @@
-
-using TypedTables, Unitful, AxisKeys, Dates, Parameters, FourierAnalysis, Glob, CSV, StructArrays, TypedTables, JLD2
+using TypedTables, Unitful, Dates, Parameters, FourierAnalysis, Glob, CSV, StructArrays, TypedTables, JLD2, IntervalSets
 import Unitful: Hz, s as 𝓈
+
 
 ##==============================================================================
 #Experiment Types
-
-
+#
 #Brain Regions
 struct Region
     name
 end
+
 const AMG = Region("Amygdala")
 const CA2 = Region("Ca2")
 const MOB = Region("MOB")
@@ -54,11 +54,13 @@ const Approach = Behavior("Approach")
 const Retreat = Behavior("Retreat")
 
 
+
+#
 ##==============================================================================
 # Observation Epochs
 abstract type Observation end
-abstract type ObservationInterval <: Observation end
 
+abstract type ObservationInterval <: Observation end
 @with_kw struct Session <: ObservationInterval
     filename
     date
@@ -73,7 +75,9 @@ end
     condition
 end
 
-##==============================================================================
+
+
+##=============================================================================
 #  Data Types
 abstract type ObservationData <: Observation end
 
@@ -95,6 +99,7 @@ end
     fs
     lfp
 end
+get_interval_lfp(x::LFPRecording, s, e) = x.lfp[round(Int, (s-x.start_time)*1010.1 : (e-x.start_time)*1010.1)]
 
 ##==============================================================================
 #  Time Handlers 
@@ -104,33 +109,56 @@ date(t::T) where {T<:Session} = t.date
 date(t::T) where {T<:Observation} = date(root_interval(t))
 start_time(t::T) where {T<:Observation} = t.start_time
 end_time(t::T) where {T<:Observation} = t.end_time
+time_interval(t::T) where {T<:Observation} = start_time(t) .. end_time(t)
 duration(t::T) where {T<:Observation} = end_time(t) - start_time(t)
-in_interval(::T, j::T) where {T<:Observation} = root_interval(i) === root_interval(j) ? (start_time(j) <= start_time(i)) && (end_time(i) >= end_time(j)) : false
-
+⊂(x, y) = (x) ∩ (y) == (x)
+in_interval(i::T, j::N) where {N,T} = root_interval(i) === root_interval(j) ? time_interval(i) ⊂ time_interval(j) : false
 ##=============================================================================
 # Data Handlers
-abstract type DataShape end
-struct ArrayData <: DataShape end
-struct ScalarData <: DataShape end
-datashape(t::T) where {T} = ScalarData()
+# abstract type DataShape end
+# struct ArrayData <: DataShape end
+# struct ScalarData <: DataShape end
+# datashape(::T) where T = ScalarData() #fall-back, by default everything is scalar
+# datashape(::LFPRecording) = ArrayData()
 
-data(t::DataShape) = data(datashape(t), t)
-data(::ScalarData, t) = value(t)
-data(::ArrayData, t) = KeyedArray(value(t), dims(t)...)
+# data(x::T) where T = data(datashape(T), x)
 
-datashape(t::LFPRecording) = ArrayData()
-value(t::LFPRecording) = t.lfp
-dims(t::LFPRecording) = (time = start_time(t):1/t.fs:end_time(t))
+# data(::ScalarData, x) = value(x)
+# data(::ArrayData, x) = (value(x), dims(x))
+
+# value(t::LFPRecording) = t.lfp
+# dims(t::LFPRecording) = (:time, start_time(t):1/t.fs:end_time(t))
 
 ##==============================================================================
-# Data Filters
+# Links
 ##==============================================================================
 
-#
 
 
+using AbstractTrees
+import AbstractTrees: children
 
+function AbstractTrees.children(tree::T) where {T<:Observation}
+    [ismissing(getfield(tree, Symbol(f))) ? "Missing" : getfield(tree, Symbol(f)) for f in fieldnames(T)]
+end
 
+function AbstractTrees.printnode(io::IO, node::BehavioralEvent)
+    print(io, "Event")
+end
+
+function AbstractTrees.printnode(io::IO, node::Session)
+    print(io, "Session")
+end
+
+function AbstractTrees.printnode(io::IO, node::Behavior)
+    print(io, node.name)
+end
+function AbstractTrees.printnode(io::IO, node::Rat)
+    print(io, node.name)
+end
+function AbstractTrees.printnode(io::IO, node::Date)
+    print(io, node)
+end
 
 
 
