@@ -6,71 +6,59 @@
 ##==============================================================================
 include("./ROIontology.jl")
 using Associates
-import Base.hash
+import Associates: unwrapsinglet
 
+import Base.(⊆)
+(⊆)(i::Tuple{Session, ClosedInterval}, j::Tuple{Session, ClosedInterval}) = i[1]==j[1] ? i[2] ⊆ j[2] : false
 
 ##==============================================================================
-# data  handeling 
-#* link objs
-#* load get_evet_lfp
-#* filter 
-#* select
-#* remove artifacts
-#* group
+#Load data
 
 ROIexp = load("./Data/ROIexp.jld2", "ROIexp");
 lfp = ROIexp[:lfp_data]
 events = ROIexp[:behavioral_events]
 trials = ROIexp[:trials]
-session = ROIexp[:sessions]
+sessions = ROIexp[:sessions]
 
 
-lfp_hashmap = GMap(hash, lfp)
-dom(lfp_hashmap)
+##==============================================================================
+#Make Links
+
+lfp_session=GMap(x->x.session, lfp)
+lfp_region=GMap(x->x.region, lfp)
+lfp_rat=GMap(x->x.rat, lfp)
 
 
-# for (fun, field) = zip(Symbol.("get_".*String.(fnames)), fieldnames(LFPRecording))
-#     eval(quote
-#         $fun(k::UInt) = getfield($(inverse(lfp_hashmap))(k), $field)
-#     end)
-# end
-
-events[1]
-
+trial_session=GMap(x->x.session, trials)
+trial_time=GMap(x->time_interval(x), trials)
+trial_coord=GMap(x->(trial_session(x), trial_time(x)), trials)
+trial_condition=GMap(x->x.condition, trials)
+trial_condition_name=GMap(x->x.condition.name, trials)
+trial_condition_agenttype=GMap(x->agenttype(x.condition), trials)
 
 
-lfpsessions=GMap(x->x.session, lfp)
+[TrialCondition{Missing}] ∪ [TrialCondition{Rat}] 
+event_session=GMap(x->x.session, events)
+event_time=GMap(x->time_interval(x), events)
+event_coord=GMap(x->(event_session(x), event_time(x)), events)
+event_behavior=GMap(x->x.behavior, events)
+event_actor=GMap(x->x.actor, events)
+event_reciever=GMap(x->x.receiver, events)
 
-
-
-
-event_behavior=GMap(e->e.behavior, events)
-
-dom(event_behavior)
-inverse(event_behavior)
-
-
-
-event_agent=GMap(e->e.actor, events)
-
-for k in keys(inverse(event_agent).forward) 
-   println(length(inverse(event_agent).forward[k]))
+event_trial_dict=Dict{BehavioralEvent, Trial}()
+for e in events
+    t=filter(x->event_coord(e)⊆trial_coord(x), trials)
+    if !isempty(t)
+        event_trial_dict[e]=t[1]
+    end
+end
+event_trial=GMap(event_trial_dict)
+event_lfp=inv(lfp_session)∘event_session
+struct EventData
+    event
+    data
 end
 
-lfpsessino=GMap(x->x.session, lfp)
-
-using FourierAnalysis
-GMap(x->spectra(x.lfp, 256, 512), lfp)
-
-
-session_event= inverse(GMap(x->x.session, events))
-
-collect(session_event.forward)[1]
-
-"(lfp<-session)(sessino<-event)(event<-rat)" 
-
-
-Spectra
 
 
 
@@ -79,71 +67,40 @@ Spectra
 
 
 
-te=AssociativeMap(e -> filter(t -> in_interval(e, t), trials), events)
-image(te, events[1])
+##==============================================================================
+#Selecting Events
+using MacroTools: postwalk, @capture, isexpr 
 
-links=Dict()
-using ProfileView
-@profview elfp = AssociativeMap(e -> filter(l -> in_interval(e, l), lfp), events)
-getlfp(e::BehavioralEvent) = links["event->lfp"](e)
+macro where(ex) 
+    expr = _where(ex)
+    return expr
+end
 
-@btime el =filter(l -> in_interval(events[1500], l), lfp)
-elfp = ans
-[f for f in elfp(events[1500])]
+function _where(ex)
+    postwalk(x -> (isexpr(x) && x.head==:tuple) ? quote preimage(($x)[1],($x)[2]) end : x,  ex)
+end
 
 
-
-links["lfp->rat"] = AssociativeMap(l -> l.rat, lfp)
-links["lfp->region"] = AssociativeMap(l -> l.region, lfp)
-rat(l::LFPRecording)=links["lfp->rat"](l)
-region(l::LFPRecording)=links["lfp->region"](l)
-
-links["event->lfp"].inv_amap
-l2s = map(l -> l.session, lfp)
-e2s=map(e -> e.session, events)
-
-E=AssociativeMap(Dict(hash.(events).=>e2s))
-L=AssociativeMap(Dict(hash.(lfp).=>l2s))
-
-E ∘ L
+##==============================================================================
+#Selecting Events
+# @where [(propertymap, values) or Set]  set operation [(propertymap, values) or Set] ...
+event_subs = @where (trial_condition_name∘event_trial, "Habituation") ∩ (event_behavior, Groom) ∩ dom(event_lfp)
 
 
 
+##==============================================================================
+#Selecting LFP
 
+lfp_subs = @where image(event_lfp, event_subs) ∩ (lfp_region, AMG)
 
-links=Dict()
-using JET
-@btime AssociativeMap(D)
-@ProfView links["event->behavior"] = AssociativeMap(e -> e.behavior, events)
-links["event->conditon"] = AssociativeMap(t -> t.condition, trials) 
-links["event->agent"] = AssociativeMap(e -> e.session, events);
-
-
-inverse(links["event->behavior"])
-
-links["event->conditon"](events[300])
-
-links["trial->session"] = AssociativeMap(t -> filter(s -> in_interval(t, s), session), trials);
-links["lfp->region"] = AssociativeMap(l -> l.region, lfp);
-links["condition->agent"] = AssociativeMap(agenttype, [x.condition for x in trials]);
-links["trial->condition"] = AssociativeMap(t -> t.condition, trials);
-links["lfp-rat"] = AssociativeMap(l -> l.rat, lfp)
+lfp_subs
 
 
 
-links["trial-condition"]
-links["event-trial"]
-
-using JLD2
-count(!isempty(links["event-lfp"](e)) for e in events)
-save("./Data/ROIexp.jld2", "ROIexp", ROIexp, "links", links)
 
 
-trial_type
-agent
-condition
-rat
-region
+
+
 
 
 

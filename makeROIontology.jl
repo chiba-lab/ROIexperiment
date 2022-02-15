@@ -1,3 +1,4 @@
+
 include("./ROIontology.jl")
 using Glob
 
@@ -5,13 +6,13 @@ using Glob
 files = glob("*.csv", "Data/CSV/lfp_data")
 tbls = [Table(CSV.File(f)) for f in files]
 r2r = Dict([(AMG, :amyg), (MOB, :mob), (CA2, :ca2), (INS, :insula)])
-t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]), t.time[1], t.time[end], Rat("EG7"), r, 1010.1, collect(getproperty(t, r2r[r])))
+t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]-t.time[1]), 0, t.time[end]-t.time[1], Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
 lfpdata = map(x -> t2lfp.(tbls, Ref(x)), [AMG, MOB, CA2, INS])
 lfpdata = vcat(lfpdata...)
 sessions = map(x -> x.session, lfpdata)
 unique!(sessions)
 
-condD = Dict([("EE", EE), ("Empty", EE), ("Freeroam", FR), ("Habituation", HBT), ("OF", OF), ("Interaction", ITR), ("Object", Object), ("Rat", Rat), ("Rat ", Rat), ("Robot", Robot), (missing, missing)])
+condD = Dict([("EE", EE), ("Empty", EE), ("Freeroam", FR), ("Habituation", HBT), ("OF", OF), ("Interaction", ITR), ("Object", Object), ("Rat", Rat), ("Rat ", Rat), ("Robot", Robot), (missing, Missing)])
 
 macro name2cond(C, T)
     :($C($T))
@@ -27,7 +28,7 @@ function sesfun(i)
         return s[1]
     end
 end
-sesfun("EG7_3_28_18")
+
 tt = Table(CSV.File("Data/CSV/trial_info/behavioral_trials.csv"; header = false))
 trials = map(x -> Trial(sesfun(x.Column2), x.Column3, x.Column4, (condD[x.Column5])(condD[x.Column6])), tt)
 trials
