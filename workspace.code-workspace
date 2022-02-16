@@ -1,10 +1,9 @@
 {
-    "folders": [
+	"folders": [
 		{
 			"path": "."
 		}
 	],
 	"settings": {
-		"julia.environmentPath": "/Users/leobreston/Documents/Julia/ROIexperiment"
-    }
+	}
 }

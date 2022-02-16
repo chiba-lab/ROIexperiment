@@ -1,6 +1,10 @@
-using TypedTables, Unitful, Dates, Parameters, FourierAnalysis, Glob, CSV, StructArrays, TypedTables, JLD2, IntervalSets
+using TypedTables, Unitful, Dates, Parameters, Glob, CSV, StructArrays, TypedTables, JLD2, IntervalSets, AutoHashEquals
+import FourierAnalysis as FA
 import Unitful: Hz, s as 𝓈
 
+
+
+##===========================================================================================================================
 
 ##==============================================================================
 #Experiment Types
@@ -17,20 +21,29 @@ const INS = Region("Insula")
 
 #Agents
 abstract type Agent end
-struct Rat <: Agent
+@auto_hash_equals struct Rat <: Agent
     name
 end
-struct Robot <: Agent
+@auto_hash_equals struct Robot <: Agent
     name
 end
-struct Object <: Agent
+@auto_hash_equals struct Object <: Agent
     name
 end
+
+const EG7 = Rat("EG7")
+const RRSD18 = Rat("RRSD18")
+const RRSD28 = Rat("RRSD28")
+const RRSD17 = Rat("RRSD17")
 
 
 #Conditions 
 struct TrialCondition{T}
     name
+end
+
+function agenttype(t::TrialCondition{T}) where T
+    return T
 end
 
 const EE(T) = TrialCondition{T}("Empty Empty")
@@ -40,7 +53,7 @@ const HBT(T) = TrialCondition{T}("Habituation")
 const ITR(T) = TrialCondition{T}("Interaction")
 
 #Behaviors 
-struct Behavior
+@auto_hash_equals struct Behavior
     name
 end
 
@@ -53,7 +66,7 @@ const Top = Behavior("Top")
 const Approach = Behavior("Approach")
 const Retreat = Behavior("Retreat")
 
-
+const FBands = Dict(())
 
 #
 ##==============================================================================
@@ -61,14 +74,14 @@ const Retreat = Behavior("Retreat")
 abstract type Observation end
 
 abstract type ObservationInterval <: Observation end
-@with_kw struct Session <: ObservationInterval
+@auto_hash_equals struct Session <: ObservationInterval
     filename
     date
     start_time
     end_time
 end
 
-@with_kw struct Trial <: ObservationInterval
+@auto_hash_equals struct Trial <: ObservationInterval
     session
     start_time
     end_time
@@ -81,7 +94,7 @@ end
 #  Data Types
 abstract type ObservationData <: Observation end
 
-@with_kw struct BehavioralEvent <: ObservationData
+struct BehavioralEvent <: ObservationData
     session
     start_time
     end_time
@@ -90,7 +103,7 @@ abstract type ObservationData <: Observation end
     receiver
 end
 
-@with_kw struct LFPRecording <: ObservationData
+struct LFPRecording <: ObservationData
     session
     start_time
     end_time
@@ -99,7 +112,19 @@ end
     fs
     lfp
 end
-get_interval_lfp(x::LFPRecording, s, e) = x.lfp[round(Int, (s-x.start_time)*1010.1 : (e-x.start_time)*1010.1)]
+
+get_interval(x::LFPRecording, s, e) =  x.lfp[round(Int, (s - x.start_time) * 1010.1):round(Int, (e - x.start_time) * 1010.1)]
+struct DataWindow 
+    onset
+    offset
+    data::ObservationData
+end
+
+function get_data(w::DataWindow, pre, post) 
+    get_interval(w.data, max(w.onset - pre, start_time(w.data)), min(w.offset + post, end_time(w.data)))
+end
+
+
 
 ##==============================================================================
 #  Time Handlers 
@@ -132,6 +157,14 @@ in_interval(i::T, j::N) where {N,T} = root_interval(i) === root_interval(j) ? ti
 ##==============================================================================
 # Links
 ##==============================================================================
+
+
+
+
+
+
+
+
 
 
 

@@ -54,16 +54,20 @@ for e in events
 end
 event_trial=GMap(event_trial_dict)
 event_lfp=inv(lfp_session)∘event_session
-struct EventData
-    event
-    data
+
+event_lfp_window=GMap(e->map(x->DataWindow(e.start_time, e.end_time, x), event_lfp(e)), collect(dom(event_lfp)))
+lfp_window_event_dict=Dict{DataWindow, BehavioralEvent}()
+for i in collect(dom(event_lfp_window))
+    for j in event_lfp_window(i)
+      if  j.onset..j.offset ⊆ start_time(j.data)..end_time(j.data) 
+            lfp_window_event_dict[j]=i
+      end
+    end
 end
+lfp_window_event=GMap(lfp_window_event_dict)
+event_lfp_window=inv(lfp_window_event)
 
-
-
-
-
-
+window_data=GMap(x->x.data,collect(dom(lfp_window_event)))
 
 
 
@@ -84,24 +88,49 @@ end
 ##==============================================================================
 #Selecting Events
 # @where [(propertymap, values) or Set]  set operation [(propertymap, values) or Set] ...
-event_subs = @where (trial_condition_name∘event_trial, "Habituation") ∩ (event_behavior, Groom) ∩ dom(event_lfp)
+event_subs = @where (trial_condition_name∘event_trial, "Habituation") ∩ (event_behavior, Groom) ∩ dom(event_lfp_window)
 
 
 
 ##==============================================================================
 #Selecting LFP
 
-lfp_subs = @where image(event_lfp, event_subs) ∩ (lfp_region, AMG)
-
-lfp_subs
+event_subs_lfp_windows = @where (lfp_window_event, event_subs) ∩ (lfp_region∘window_data, AMG) ∩ (lfp_rat∘window_data, RRSD18)
 
 
+##==============================================================================
+#Extract Data
+#get_data(data_winndow, pre, post)
+event_subs_data = GMap(x->get_data(x,1,1), event_subs_lfp_windows)
+
+##==============================================================================
+
+#run analysis
+event_subs_spectra = GMap(x->FA.spectra(event_subs_data(x), 256, 512), event_subs_lfp_windows)
+
+event_subs_power = GMap(x->FA.extract(event_subs_spectra(x),:), event_subs_lfp_windows)
+
+
+##==============================================================================
+#average
+using Statistics
+mat=hcat(event_subs_power.(event_subs_lfp_windows)...)
+m=mean(mat, dims=2)
+s=std(mat, dims=2)/sqrt(size(mat,2))
 
 
 
+f = Figure();
+ax=Axis(f[1, 1], yscale = log10,
+        yminorticksvisible = true, yminorgridvisible = true,
+        yminorticks = IntervalsBetween(8))
+errorbands!(ax, 1:1:256, vec(m), vec(s); linewidth=2)
+f
 
 
-
-
-
-
+f = Figure();
+ax=Axis(f[1, 1])
+t=collect(1:10)
+y=sin.(t)
+eventwindow!(ax, 1:10, sin, 3, 7)
+f
