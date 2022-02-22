@@ -1,4 +1,4 @@
-using TypedTables, Unitful, Dates, Parameters, Glob, CSV, StructArrays, TypedTables, JLD2, IntervalSets, AutoHashEquals
+using TypedTables, Unitful, Dates, Parameters, Glob, CSV, StructArrays, JLD2, IntervalSets, AutoHashEquals, Associates
 import FourierAnalysis as FA
 import Unitful: Hz, s as 𝓈
 
@@ -66,7 +66,16 @@ const Top = Behavior("Top")
 const Approach = Behavior("Approach")
 const Retreat = Behavior("Retreat")
 
-const FBands = Dict(())
+#freq bands 
+const Delta = (1, 4) 
+const Respiratory = (3, 12) 
+const Theta= (5,10) 
+const Alpha = (8, 12) 
+const beta = (15, 35)
+const GammaLow = (50, 59)
+const GammaHigh = (70, 100)
+
+const FBands = (Delta, Respiratory, Theta, Alpha, beta, GammaLow, GammaHigh)
 
 #
 ##==============================================================================
@@ -74,14 +83,13 @@ const FBands = Dict(())
 abstract type Observation end
 
 abstract type ObservationInterval <: Observation end
-@auto_hash_equals struct Session <: ObservationInterval
+ struct Session <: ObservationInterval
     filename
     date
     start_time
     end_time
 end
-
-@auto_hash_equals struct Trial <: ObservationInterval
+struct Trial <: ObservationInterval
     session
     start_time
     end_time
@@ -121,7 +129,7 @@ struct DataWindow
 end
 
 function get_data(w::DataWindow, pre, post) 
-    get_interval(w.data, max(w.onset - pre, start_time(w.data)), min(w.offset + post, end_time(w.data)))
+    get_interval(w.data, max(w.onset - pre, w.data.start_time+(1/1010.1)), min(w.offset + post, w.data.end_time))
 end
 
 
@@ -140,32 +148,23 @@ duration(t::T) where {T<:Observation} = end_time(t) - start_time(t)
 in_interval(i::T, j::N) where {N,T} = root_interval(i) === root_interval(j) ? time_interval(i) ⊂ time_interval(j) : false
 ##=============================================================================
 # Data Handlers
-# abstract type DataShape end
-# struct ArrayData <: DataShape end
-# struct ScalarData <: DataShape end
-# datashape(::T) where T = ScalarData() #fall-back, by default everything is scalar
-# datashape(::LFPRecording) = ArrayData()
+using MacroTools: postwalk, @capture, isexpr 
 
-# data(x::T) where T = data(datashape(T), x)
+macro where(ex) 
+    expr = _where(ex)
+    return expr
+end
 
-# data(::ScalarData, x) = value(x)
-# data(::ArrayData, x) = (value(x), dims(x))
-
-# value(t::LFPRecording) = t.lfp
-# dims(t::LFPRecording) = (:time, start_time(t):1/t.fs:end_time(t))
+function _where(ex)
+    postwalk(x -> (isexpr(x) && x.head==:tuple) ? quote preimage(($x)[1],($x)[2]) end : x,  ex)
+end
 
 ##==============================================================================
 # Links
 ##==============================================================================
 
-
-
-
-
-
-
-
-
+import Base.(⊆)
+(⊆)(i::Tuple{Session, ClosedInterval}, j::Tuple{Session, ClosedInterval}) = i[1]==j[1] ? i[2] ⊆ j[2] : false
 
 
 using AbstractTrees

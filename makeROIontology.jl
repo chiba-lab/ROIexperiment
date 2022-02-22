@@ -6,7 +6,7 @@ using Glob
 files = glob("*.csv", "Data/CSV/lfp_data")
 tbls = [Table(CSV.File(f)) for f in files]
 r2r = Dict([(AMG, :amyg), (MOB, :mob), (CA2, :ca2), (INS, :insula)])
-t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]-t.time[1]), 0, t.time[end]-t.time[1], Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
+t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]-t.time[1]), 0, length(t.time)/1010.1, Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
 lfpdata = map(x -> t2lfp.(tbls, Ref(x)), [AMG, MOB, CA2, INS])
 lfpdata = vcat(lfpdata...)
 sessions = map(x -> x.session, lfpdata)
@@ -83,10 +83,6 @@ behavioral_events
 # behavioral_events = StructArray(behavioral_events)
 
 ROIexp = Dict([(:sessions, sessions), (:trials, trials), (:behavioral_events, behavioral_events), (:lfp_data, lfpdata)])
-
-
-
-
 
 
 save("./Data/ROIexp.jld2", "ROIexp", ROIexp)

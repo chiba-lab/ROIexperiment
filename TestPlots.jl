@@ -1,18 +1,4 @@
-#* 1 filter and group data 
-#* 2 run DSP
-#* 3 averaging 
-#* 4 plots
-#* 5 Stats
-##==============================================================================
 include("./ROIontology.jl")
-using Associates
-import Associates: unwrapsinglet
-
-import Base.(⊆)
-(⊆)(i::Tuple{Session, ClosedInterval}, j::Tuple{Session, ClosedInterval}) = i[1]==j[1] ? i[2] ⊆ j[2] : false
-
-##==============================================================================
-#Load data
 
 ROIexp = load("./Data/ROIexp.jld2", "ROIexp");
 lfp = ROIexp[:lfp_data]
@@ -20,117 +6,61 @@ events = ROIexp[:behavioral_events]
 trials = ROIexp[:trials]
 sessions = ROIexp[:sessions]
 
-
+include("./Links.jl")
 ##==============================================================================
-#Make Links
-
-lfp_session=GMap(x->x.session, lfp)
-lfp_region=GMap(x->x.region, lfp)
-lfp_rat=GMap(x->x.rat, lfp)
+const WC = collect(codom(window_data))
+##=============================================================================
 
 
-trial_session=GMap(x->x.session, trials)
-trial_time=GMap(x->time_interval(x), trials)
-trial_coord=GMap(x->(trial_session(x), trial_time(x)), trials)
-trial_condition=GMap(x->x.condition, trials)
-trial_condition_name=GMap(x->x.condition.name, trials)
-trial_condition_agenttype=GMap(x->agenttype(x.condition), trials)
+using Interpolations
+using CairoMakie
 
+dataregion = MOB
+dataevent="Sniff"
 
-[TrialCondition{Missing}] ∪ [TrialCondition{Rat}] 
-event_session=GMap(x->x.session, events)
-event_time=GMap(x->time_interval(x), events)
-event_coord=GMap(x->(event_session(x), event_time(x)), events)
-event_behavior=GMap(x->x.behavior, events)
-event_actor=GMap(x->x.actor, events)
-event_reciever=GMap(x->x.receiver, events)
-
-event_trial_dict=Dict{BehavioralEvent, Trial}()
-for e in events
-    t=filter(x->event_coord(e)⊆trial_coord(x), trials)
-    if !isempty(t)
-        event_trial_dict[e]=t[1]
-    end
+CairoMakie.activate!(type="png")
+idxs=findall(x->window_data_event(x).behavior.name == dataevent,WC) ∩ findall(x->window_data_region(x)==dataregion,WC)
+f= Figure();
+axs = [Axis(f[i, j]) for i = 1:3, j=1:3]
+for n in 1:9
+    idx=rand(idxs)
+    test = 1:1:length(WC[idx])|>x->map(x->sin(16*2*pi*x/1010.1),x)
+    S=TFamplitude(WC[idx], 256, 0, 1)
+    itp=interpolate(rotl90(S.y), BSpline(Cubic(Line(OnGrid()))))
+    x=1:1:size(S.y, 2)
+    y=exp2.(range(0, log2(252.99), 100))
+    
+    heatmap!(axs[n],[itp(x1,y1) for x1 = x, y1 = y]; colormap = :jet)
+    vlines!(axs[n], 1010; color=:orange, linewidth=2, linestyle=:dash)
+    vlines!(axs[n],length(x)-1010;color=:red, linewidth=2, linestyle=:dash)
+    axs[n].xticks = ([1010, length(x)-1010], ["start", "end"])
+    axs[n].yticks=([21, 100],  ["8", "127"])
+    e=window_data_event(WC[idx]).behavior.name
+    region=window_data_region(WC[idx]).name
+    axs[n].title = "$e $region"
 end
-event_trial=GMap(event_trial_dict)
-event_lfp=inv(lfp_session)∘event_session
-
-event_lfp_window=GMap(e->map(x->DataWindow(e.start_time, e.end_time, x), event_lfp(e)), collect(dom(event_lfp)))
-lfp_window_event_dict=Dict{DataWindow, BehavioralEvent}()
-for i in collect(dom(event_lfp_window))
-    for j in event_lfp_window(i)
-      if  j.onset..j.offset ⊆ start_time(j.data)..end_time(j.data) 
-            lfp_window_event_dict[j]=i
-      end
-    end
-end
-lfp_window_event=GMap(lfp_window_event_dict)
-event_lfp_window=inv(lfp_window_event)
-
-window_data=GMap(x->x.data,collect(dom(lfp_window_event)))
-
-
-
-##==============================================================================
-#Selecting Events
-using MacroTools: postwalk, @capture, isexpr 
-
-macro where(ex) 
-    expr = _where(ex)
-    return expr
-end
-
-function _where(ex)
-    postwalk(x -> (isexpr(x) && x.head==:tuple) ? quote preimage(($x)[1],($x)[2]) end : x,  ex)
-end
-
-
-##==============================================================================
-#Selecting Events
-# @where [(propertymap, values) or Set]  set operation [(propertymap, values) or Set] ...
-event_subs = @where (trial_condition_name∘event_trial, "Habituation") ∩ (event_behavior, Groom) ∩ dom(event_lfp_window)
-
-
-
-##==============================================================================
-#Selecting LFP
-
-event_subs_lfp_windows = @where (lfp_window_event, event_subs) ∩ (lfp_region∘window_data, AMG) ∩ (lfp_rat∘window_data, RRSD18)
-
-
-##==============================================================================
-#Extract Data
-#get_data(data_winndow, pre, post)
-event_subs_data = GMap(x->get_data(x,1,1), event_subs_lfp_windows)
-
-##==============================================================================
-
-#run analysis
-event_subs_spectra = GMap(x->FA.spectra(event_subs_data(x), 256, 512), event_subs_lfp_windows)
-
-event_subs_power = GMap(x->FA.extract(event_subs_spectra(x),:), event_subs_lfp_windows)
-
-
-##==============================================================================
-#average
-using Statistics
-mat=hcat(event_subs_power.(event_subs_lfp_windows)...)
-m=mean(mat, dims=2)
-s=std(mat, dims=2)/sqrt(size(mat,2))
-
-
-
-f = Figure();
-ax=Axis(f[1, 1], yscale = log10,
-        yminorticksvisible = true, yminorgridvisible = true,
-        yminorticks = IntervalsBetween(8))
-errorbands!(ax, 1:1:256, vec(m), vec(s); linewidth=2)
 f
 
 
-f = Figure();
-ax=Axis(f[1, 1])
-t=collect(1:10)
-y=sin.(t)
-eventwindow!(ax, 1:10, sin, 3, 7)
-f
+# heatmap(1:.5:3357, .5:.5:60, rotl90(S.y); colormap = :jet)
+x=inverse(window_data_event)(events[1])
+S=TFanalyticsignal(x[1][1:1000], 256, 0, 1)
+R=TFanalyticsignal(x[2][1:1000], 256, 0, 1)
+using ComplexPhasePortrait
+
+fig=Figure();
+ax, h = heatmap(fig[1,1],angle.(rotl90(conj(R.y).*(S.y)))[:,1:60]; colormap = :roma, colorrange = (-π,π), backlight = 1f0, highclip = :black, interpolate=true)
+Colorbar(fig[1, 2], h, ticks = ([-π, -π / 2, 0, π / 2, π], String.([-π, -π / 2, 0, π / 2, π])))
+fig
+##==============================================================================
+# itp=interpolate(rotl90(S.y), BSpline(Cubic(Line(OnGrid()))))
+# x=1:1:size(S.y, 2)
+# y=exp2.(range(0, log2(252.99), 300))
+# (253-1)/2+1
+
+# f=Figure();
+# ax=Axis(f[1, 1])
+# heatmap!(ax,[itp(x1,y1) for x1 = x, y1 = y]; colormap = :jet)
+# hidedecorations!(ax)
+# f
+#diverging_rainbow_bgymr_45_85_c67_n256, 
