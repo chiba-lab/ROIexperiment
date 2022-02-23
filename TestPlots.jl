@@ -46,23 +46,30 @@ f
 # heatmap(1:.5:3357, .5:.5:60, rotl90(S.y); colormap = :jet)
 using CairoMakie
 using Interpolations
+using ProgressBars
+import DSP as dsp
 CairoMakie.activate!(type="png")
-x=inverse(window_data_event)(events[1])
+x=inverse(window_data_event)(events[12])
+
 f= Figure();
 # axs = [Axis(f[i, j]) for i = 1:4, j=1:4]
-for i in 1:4
+for i in tqdm(1:4)
         for j in i+1:4
+                e=window_data_event(x[1]).behavior.name
+                r1=window_data_region(x[i]).name
+                r2=window_data_region(x[j]).name
+                # x1=dsp.resample.(x, 1/10)
+
                 S=FA.TFanalyticsignal(x[i], 256, 0, 1)
                 R=FA.TFanalyticsignal(x[j], 256, 0, 1)
         
                 l= size(S.y, 2)
                 ph = angle.(rotl90(conj(R.y).*(S.y)))[:, 1:128]
-                amp = log10.(abs.(rotl90(conj(R.y).*(S.y)))[:, 1:128])
+                amp = abs.(rotl90(conj(R.y).*(S.y)))[:, 1:128]
 
                 itp=interpolate(ph, BSpline(Cubic(Line(OnGrid()))))
 
-                ax, h = heatmap(f[j-1,i], collect((1:1:l)./1010.1), 1:.1:128, itp[1:1:l, 1:.1:128] ; colormap = :romaO		
-                , colorrange = (-π,π), backlight = 1f0)
+                ax, h = heatmap(f[j-1,i], collect((1:10:l)./1010.1), 1:.1:128, itp[1:10:l, 1:.1:128] ; colormap = :romaO, colorrange = (-π,π), backlight = 1f0)
                 ax.yticks = ([1,64,128], ["1","36", "64"])
                 if i == 1 
                         ax.ylabel = "Freq (Hz)"
@@ -70,15 +77,19 @@ for i in 1:4
                 if j == 4
                         ax.xlabel = "Time (s)"
                 end
-                e=window_data_event(x[1]).behavior.name
-                r1=window_data_region(x[i]).name
-                r2=window_data_region(x[j]).name
-                ax.title = "$r1 × $r2"
+             
+                ax.title = "$e, $r1 × $r2"
                 vlines!(ax, 1; color=:green, linewidth=2, linestyle=:dash)
                 vlines!(ax, l/1010.1-1;color=:red, linewidth=2, linestyle=:dash)
                 # Colorbar(h, ticks = ([-π, -π / 2, 0, π / 2, π], [L"-\pi", L"-\pi/2", L"0", L"\pi/2", L"\pi"]))
+                amp = abs.(rotl90(conj(R.y).*(S.y)))[:, 1:128]
+                # ax2, h2 = heatmap(f[j-1,i+1], collect((1:1:l)./1010.1), 1:.1:128, amp[1:1:l, 1:.1:128] ; colormap = :jet)
+
         end
 end
+# Colorbar(f[3,4], h, ticks = ([-π, -π / 2, 0, π / 2, π], [L"-\pi", L"-\pi/2", L"0", L"\pi/2", L"\pi"]))
+Colorbar(f[:,4], h, ticks = ([-π, -π / 2, 0, π / 2, π], [L"-\pi", L"-\pi/2", L"0", L"\pi/2", L"\pi"]))
+
 f
 ##==============================================================================
 # itp=interpolate(rotl90(S.y), BSpline(Cubic(Line(OnGrid()))))
