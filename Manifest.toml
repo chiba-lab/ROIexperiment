@@ -50,7 +50,9 @@ version = "4.0.3"
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 
 [[deps.Associates]]
-path = "/Users/leobreston/.julia/dev/Associates"
+git-tree-sha1 = "9a9f54d878172e244face3217dba24b743b67032"
+repo-rev = "main"
+repo-url = "https://github.com/lbreston/Associates.jl"
 uuid = "cbd430ec-77ce-45a7-8a10-accba12b1c72"
 version = "0.1.0"
 
