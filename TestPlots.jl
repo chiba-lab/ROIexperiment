@@ -29,13 +29,13 @@ for n in 1:9
     S=FA.TFamplitude(WC[idx], 256, 0, 1)
     itp=interpolate(rotl90(S.y), BSpline(Cubic(Line(OnGrid()))))
     x=1:1:size(S.y, 2)
-    y=exp2.(range(0, log2(252.99), 100))
+    y=exp2.(range(0, log2(239), 200))
     
     heatmap!(axs[n],[itp(x1,y1) for x1 = x, y1 = y]; colormap = :jet)
     vlines!(axs[n], 1010; color=:orange, linewidth=2, linestyle=:dash)
     vlines!(axs[n],length(x)-1010;color=:red, linewidth=2, linestyle=:dash)
     axs[n].xticks = ([1010, length(x)-1010], ["start", "end"])
-    axs[n].yticks=([1, 100],  ["1", "127"])
+    axs[n].yticks = ([1,99, 152, 200], ["1", "8", "32", "120"])
     e=window_data_event(WC[idx]).behavior.name
     region=window_data_region(WC[idx]).name
     axs[n].title = "$e $region"
