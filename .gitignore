@@ -2,4 +2,6 @@ Data
 TempData
 .lh
 .vscode
-
+sysimindicator.jl
+pre_comp_trace.jl
+JuliaSysimage.so

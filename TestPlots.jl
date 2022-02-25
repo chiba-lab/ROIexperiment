@@ -19,6 +19,7 @@ using CairoMakie
 dataregion = MOB
 dataevent="Sniff"
 
+
 CairoMakie.activate!(type="png")
 idxs=findall(x->window_data_event(x).behavior.name == dataevent,WC) ∩ findall(x->window_data_region(x)==dataregion,WC)
 f= Figure();
@@ -209,11 +210,13 @@ Axis(f[1, 1],
 f
 ##==============================================================================
 dataregion = CA2
+dataregion2 = MOB
 dataevent="Sniff"
 
-idxs=findall(x->window_data_event(x).behavior.name == dataevent,WC) ∩ findall(x->window_data_region(x)==dataregion,WC)
+idxs_r1=findall(x->window_data_event(x).behavior.name == dataevent,WC) #∩ findall(x->window_data_region(x)==dataregion2,WC) ∩ findall(x->window_data_region(x)==dataregion,WC)
+
 wd_pre=GMap(x->x[498:1010+511], WC)
-pre_tf=GMap(x->FA.TFanalyticsignal(x, 256, 0, 1), wd_pre.(WC[idxs]))
+pre_tf_r1=GMap(x->FA.TFanalyticsignal(x, 256, 0, 1), wd_pre.(WC[idxs]))
 
 
 pre_tf_amp = map(pre_tf.(wd_pre.(WC[idxs]))) do x
