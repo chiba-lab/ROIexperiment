@@ -20,7 +20,8 @@ const MOB = Region("MOB")
 const INS = Region("Insula")
 
 #Agents
-abstract type Agent end
+abstract type Agent 
+end
 @auto_hash_equals struct Rat <: Agent
     name
 end
@@ -30,6 +31,11 @@ end
 @auto_hash_equals struct Object <: Agent
     name
 end
+
+agenttypename(x::Rat) = "Rat"
+agenttypename(x::Robot) = "Robot"
+agenttypename(x::Object) = "Object"
+
 
 const EG7 = Rat("EG7")
 const RRSD18 = Rat("RRSD18")
@@ -46,7 +52,7 @@ function agenttype(t::TrialCondition{T}) where T
     return T
 end
 
-const EE(T) = TrialCondition{T}("Empty Empty")
+const EE(T) = TrialCondition{T}("Enriched Environment")
 const OF(T) = TrialCondition{T}("Open Field")
 const FR(T) = TrialCondition{T}("Free Roam")
 const HBT(T) = TrialCondition{T}("Habituation")
@@ -121,7 +127,7 @@ struct LFPRecording <: ObservationData
     lfp
 end
 
-get_interval(x::LFPRecording, s, e) =  x.lfp[round(Int, (s - x.start_time) * 1010.1):round(Int, (e - x.start_time) * 1010.1)]
+get_interval(x::LFPRecording, s, e) =  x.lfp[round(Int, (s - x.start_time) * 1010.1):min(round(Int, (e - x.start_time) * 1010.1), length(x.lfp))]
 struct DataWindow 
     onset
     offset
@@ -129,7 +135,9 @@ struct DataWindow
 end
 
 function get_data(w::DataWindow, pre, post) 
-    get_interval(w.data, max(w.onset - pre, w.data.start_time+(1/1010.1)), min(w.offset + post, w.data.end_time))
+ 
+         get_interval(w.data, max(w.onset - pre, w.data.start_time+(1/1010.1)), min(w.offset + post, w.data.end_time))
+
 end
 
 

@@ -7,6 +7,16 @@ end
 
 function errorbands!(ax, x, y, error; kwargs...)
     l=lines!(ax, x, y; kwargs...)
-    band!(ax, x, y-error, y+error; color=(l.color, 0.4))
+    b=band!(ax, x, y-error, y+error; color=(l.color, 0.4))
+    return l, b
 end
 
+
+
+# function pgram(ax, x, y, error; kwargs...)
+
+#     ax = Axis(ax, yscale = log10,
+#         yminorticksvisible = true, yminorgridvisible = true,
+#         yminorticks = IntervalsBetween(8))
+#     errorbands!(ax, x, vec(m), vec(s); linewidth = 2)
+# end

@@ -6,7 +6,8 @@ using Glob
 files = glob("*.csv", "Data/CSV/lfp_data")
 tbls = [Table(CSV.File(f)) for f in files]
 r2r = Dict([(AMG, :amyg), (MOB, :mob), (CA2, :ca2), (INS, :insula)])
-t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end]-t.time[1]), 0, length(t.time)/1010.1, Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
+# t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end] - t.time[1]), 0, length(t.time) / 1010.1, Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
+t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end] - t.time[1]), 0, t.time[end] - t.time[1], Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
 lfpdata = map(x -> t2lfp.(tbls, Ref(x)), [AMG, MOB, CA2, INS])
 lfpdata = vcat(lfpdata...)
 sessions = map(x -> x.session, lfpdata)
@@ -29,8 +30,8 @@ function sesfun(i)
     end
 end
 
-tt = Table(CSV.File("Data/CSV/trial_info/behavioral_trials.csv"; header = false))
-trials = map(x -> Trial(sesfun(x.Column2), x.Column3, x.Column4, (condD[x.Column5])(condD[x.Column6])), tt)
+tt = Table(vcat(CSV.File.("Data/CSV/trial_info/behavioral_trials.csv"; header = false), CSV.File.("Data/CSV/trial_info/freeroam_behavioral_trials.csv"; header = false)))
+trials = map(x -> Trial(sesfun(x.Column2), round(x.Column3, digits = 1), round(x.Column4, digits = 1), (condD[x.Column5])(condD[x.Column6])), tt)
 trials
 function str2sec(str)
     a = split(str, ":")
@@ -75,6 +76,15 @@ efilt_1 = efilt[efilt.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility
 efilt_2 = efilt[efilt.EventType.∉Ref(["Groom", "Rear", "Baseline", "Immobility"])]
 b1 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), Behavior(x.EventType), Rat(x.RatName), missing), efilt_1)
 b2 = map(x -> BehavioralEvent(sesfun(x.VideoName), str2sec(x.StartTime), str2sec(x.EndTime), Behavior(x.EventType), Rat(x.RatName), getreceiver(x)), efilt_2)
+
+et = Table(CSV.File("Data/CSV/event_info/freeroam_behavioral_events_labeled_header.csv"))
+efilt = et[et.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility", "Sniff", "Top", "Approach", "Retreat"])]
+efilt_1 = efilt[efilt.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility"])]
+efilt_2 = efilt[efilt.EventType.∉Ref(["Groom", "Rear", "Baseline", "Immobility"])]
+b3 = map(x -> BehavioralEvent(sesfun(x.VideoName), round(x.StartTime, digits=1), round( x.EndTime, digits=1), Behavior(x.EventType), Rat(x.RatName), missing), efilt_1)
+# b4 = map(x -> BehavioralEvent(sesfun(x.VideoName), x.StartTime, x.EndTime, Behavior(x.EventType), Rat(x.RatName), getreceiver(x)), efilt_2)
+
+
 behavioral_events = vcat(b1, b2)
 behavioral_events
 # sessions = StructArray(sessions)
