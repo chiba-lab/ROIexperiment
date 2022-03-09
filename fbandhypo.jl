@@ -57,6 +57,7 @@ esnull.behavior_type = fill("null", length(esnull.behavior_type))
 
 event_spectra = vcat(event_spectra, esnull)
 
+
 ##==============================================================================
 
 using MixedModels

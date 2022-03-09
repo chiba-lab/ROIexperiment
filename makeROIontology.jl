@@ -1,13 +1,15 @@
 
 include("./ROIontology.jl")
 using Glob
-
+using DSP
 
 files = glob("*.csv", "Data/CSV/lfp_data")
 tbls = [Table(CSV.File(f)) for f in files]
 r2r = Dict([(AMG, :amyg), (MOB, :mob), (CA2, :ca2), (INS, :insula)])
+flt = digitalfilter(Bandstop(59,61; fs=1010.1), Butterworth(4))
 # t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end] - t.time[1]), 0, length(t.time) / 1010.1, Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
-t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end] - t.time[1]), 0, t.time[end] - t.time[1], Rat(t.rat[1]), r, 1010.1, collect(getproperty(t, r2r[r])))
+t2lfp(t, r) = LFPRecording(Session(t.filename[1], Date(t.date[1]), 0, t.time[end] - t.time[1]), 0, t.time[end] - t.time[1], Rat(t.rat[1]), r, 1010.1, filtfilt(flt, collect(getproperty(t, r2r[r]))))
+
 lfpdata = map(x -> t2lfp.(tbls, Ref(x)), [AMG, MOB, CA2, INS])
 lfpdata = vcat(lfpdata...)
 sessions = map(x -> x.session, lfpdata)
@@ -81,7 +83,7 @@ et = Table(CSV.File("Data/CSV/event_info/freeroam_behavioral_events_labeled_head
 efilt = et[et.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility", "Sniff", "Top", "Approach", "Retreat"])]
 efilt_1 = efilt[efilt.EventType.∈Ref(["Groom", "Rear", "Baseline", "Immobility"])]
 efilt_2 = efilt[efilt.EventType.∉Ref(["Groom", "Rear", "Baseline", "Immobility"])]
-b3 = map(x -> BehavioralEvent(sesfun(x.VideoName), round(x.StartTime, digits=1), round( x.EndTime, digits=1), Behavior(x.EventType), Rat(x.RatName), missing), efilt_1)
+b3 = map(x -> BehavioralEvent(sesfun(x.VideoName), round(x.StartTime, digits = 1), round(x.EndTime, digits = 1), Behavior(x.EventType), Rat(x.RatName), missing), efilt_1)
 # b4 = map(x -> BehavioralEvent(sesfun(x.VideoName), x.StartTime, x.EndTime, Behavior(x.EventType), Rat(x.RatName), getreceiver(x)), efilt_2)
 
 

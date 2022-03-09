@@ -60,25 +60,28 @@ function fuckyouplot(e, tc, r)
 
 
     f = Figure()
-    ax = Axis(f[1, 1], yscale = log10,
+    ax = Axis(f[1, 1], yscale = log10, xscale = log10, 
         yminorticksvisible = true, yminorgridvisible = true,
         yminorticks = IntervalsBetween(8))
 
     for i in collect(1:1:length(g))
         k = collect(keys(g))[i]
         spcs = g[k] |> x -> wd_peri.(x) |> x -> peri_spec.(x)
-        fl = spcs[1].flabels
+        fl = spcs[1].flabels .* 1010.1 / 256
         spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
         m = mean(spcs, dims = 2)
         s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
         # errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
         lines!(fl, vec(m), label = dct[k]; linewidth = 2)
+
     end
+    xlims!(fl[1],120)
     f[1, 2] = Legend(f, ax, "Agent")
     ax.xlabel = "Freq (Hz)"
     ax.ylabel = "Amp"
     ax.title = "Condition:$trial_condition, Event:$event_name, Region:$(region.name)"
     save("./Mean specs/$(trial_condition)_$(event_name)_$(region.name).png", f)
+
 end
 
 for e in ["Groom", "Rear", "Baseline", "Immobility"]
@@ -115,3 +118,34 @@ end
 # ax.ylabel = "Freq (Hz)"
 # ax.xlabel = "Amp"
 # f
+##
+using CairoMakie
+include("./PlotFuncs.jl")
+using SplitApplyCombine
+
+using Statistics
+
+idxs = findall(x -> window_data_event(x).behavior.name == "Sniff", WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == "Free Roam", WC) ∩ findall(x -> window_data_region(x) == MOB, WC)
+
+dta = WC[idxs]
+
+f = Figure()
+ax = Axis(f[1, 1], yscale = log10, xscale = log10, yminorticksvisible = true, yminorgridvisible = true,
+    yminorticks = IntervalsBetween(8))
+
+
+
+spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+fl = spcs[1].flabels * 1010.1 / 128
+spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
+m = mean(spcs, dims = 2)
+s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
+# errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
+lines!(fl, vec(m); linewidth = 2)
+
+f
+# f[1, 2] = Legend(f, ax, "Agent")
+# ax.xlabel = "Freq (Hz)"
+# ax.ylabel = "Amp"
+# ax.title = "Condition:$trial_condition, Event:$event_name, Region:$(region.name)"
+# save("./Mean specs/$(trial_condition)_$(event_name)_$(region.name).png", f)
