@@ -115,6 +115,7 @@ struct BehavioralEvent <: ObservationData
     behavior
     actor
     receiver
+    condition
 end
 
 struct LFPRecording <: ObservationData
@@ -140,7 +141,11 @@ function get_data(w::DataWindow, pre, post)
 
 end
 
+function get_int_post_start(w::DataWindow, l)
 
+    get_interval(w.data, w.onset + (1 / 1010.1), min(w.onset + l, w.data.end_time))
+
+end
 
 ##==============================================================================
 #  Time Handlers 
