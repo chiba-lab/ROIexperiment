@@ -6,6 +6,7 @@
 ##==============================================================================
 include("./ROIontology.jl")
 
+
 ##==============================================================================
 #Load data
 
@@ -31,9 +32,9 @@ const WC = filter(x -> window_data_event(x) ∈ dom(event_trial), collect(codom(
 ##==============================================================================
 #split events into pre-peri-post with 512 sample pre and post windows
 #events shorter than 512 are expanded
-wd_pre = GMap(x -> x[498:1010], WC)
+# wd_pre = GMap(x -> x[498:1010], WC)
 wd_peri = GMap(x -> length(x) <= 2532 ? x[round(Int, length(x) / 2)-256:round(Int, length(x) / 2)+256] : x[1010:end-1010], WC)
-wd_post = GMap(x -> x[end-1010:end-498], WC)
+# wd_post = GMap(x -> x[end-1010:end-498], WC)
 
 #Freq Dom
 # pre_spec = GMap(x -> spectra(x, 256, 512), wd_pre.(WC))
@@ -42,10 +43,12 @@ peri_spec = GMap(x -> spectra(x, 256, 512), wd_peri.(WC))
 ##==============================================================================
 using CairoMakie
 include("./PlotFuncs.jl")
-using SplitApplyCombine
+import SplitApplyCombine as sac
 
-
+using DataFrames
+import MixedModels as mm
 using Statistics
+using ProgressBars
 
 function fuckyouplot(ax, e, tc, r)
     # dataregion = MOB
@@ -56,7 +59,7 @@ function fuckyouplot(ax, e, tc, r)
 
     idxs = findall(x -> window_data_event(x).behavior.name == event_name, WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == trial_condition, WC) ∩ findall(x -> window_data_region(x) == region, WC)
 
-    g = group(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
+    g = sac.group(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
     dct = Dict([(Object, "Object"), (Rat, "Rat"), (Robot, "Robot")])
     dcc = Dict([(Object, :red), (Rat, :green), (Robot, :blue)])
 
@@ -66,19 +69,44 @@ function fuckyouplot(ax, e, tc, r)
     # ax = Axis(f[1, 1], xscale = log10, yscale = log10,
     #     yminorticksvisible = true, yminorgridvisible = true,
     #     yminorticks = IntervalsBetween(8))
+av=[Object, Robot, Rat]
+for k in av
+    # k = collect(keys(g))[i]
 
-    for i in collect(1:1:length(g))
-        k = collect(keys(g))[i]
-        spcs = g[k] |> x -> wd_peri.(x) |> x -> peri_spec.(x)
-        fl = spcs[1].flabels .* 1010.1 / 256
-        spcs = map(x -> x.y ./ sum(x.y), spcs) |> x -> hcat(x...)
+    ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, g[k])
+    spcs = g[k] |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+    fl = spcs[1].flabels .* (1010.1 / 256)
+    fls = fl |> x -> round.(Int, x .* 100)
+    spcs = map(x -> x.y ./ sum(x.y), spcs) |> x -> hcat(x...)
+
+    fcols = ["f_$i" for i = fls]
+    spcstbl = DataFrame()
+    spcstbl.rat = ratname
+    for i in 1:length(fcols)
+        spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
+    end
+
+    function mefx(x)
+        fm = (mm.term(x) ~ mm.term(1) + (mm.term(1) | mm.term(:rat)))
+        fm1 = fit(MixedModel, fm, spcstbl)
+        return coef(fm1), stderror(fm1)
+    end
+
+    if length(unique(ratname)) == 1
         m = mean(spcs, dims = 2)
         s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
-        # errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
-        lines!(ax, fl, vec(m), label = dct[k], color = dcc[k]; linewidth = 2)
-        band!(ax, fl, vec(m) - vec(s), vec(m) + vec(s), color = (dcc[k], 0.3))
-        xlims!(ax, fl[1], 120)
+    else
+        ms = [mefx(fc) for fc = Symbol.(fcols)]
+        m = map(x -> x[1][1], ms) |> vcat
+        s = map(x -> x[2][1], ms) |> vcat
     end
+
+
+    # errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
+    lines!(ax, fl, vec(m), label = dct[k], color = dcc[k]; linewidth = 2)
+    band!(ax, fl, vec(m) - vec(s), vec(m) + vec(s), color = (dcc[k], 0.4))
+    xlims!(ax, fl[1], 150)
+end
     # fl = spcs[1].flabels .* 1010.1 / 256
     # xlims!(fl[1], 120)
     # f[1, 2] = Legend(f, ax, "Agent")
@@ -94,7 +122,7 @@ dcn = Dict([(AMG, "Amygdala"), (MOB, "MOB"), (CA2, "CA")])
 f = Figure();
 axs = [Axis(f[i, j], xscale = log10, yscale = log10, yminorticksvisible = true, yminorgridvisible = true, yminorticks = IntervalsBetween(8)) for i = 1:3, j = 1:3]
 cnt = 1
-for e in ["Grooming", "Rearing", "Immobility"]
+for e in tqdm(["Grooming", "Rearing", "Immobility"])
     for tc in ["Free Roam"]
         for r in [MOB, CA2, AMG]
             fuckyouplot(axs[cnt], e, tc, r)
@@ -116,7 +144,7 @@ for e in ["Grooming", "Rearing", "Immobility"]
 end
 
 f
-# save("./TempData/MeanSpecs/allspecs.png", f)
+save("./TempData/MeanSpecs/allspecs_corrected.png", f)
 ##==============================================================================
 # f = Figure();
 # ax = Axis(f[1, 1], yscale = log10,
@@ -146,14 +174,48 @@ f
 ##
 using CairoMakie
 include("./PlotFuncs.jl")
-using SplitApplyCombine
+
 
 using Statistics
+using DataFrames
 
-idxs = findall(x -> window_data_event(x).behavior.name == "Sniff", WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == "Free Roam", WC) ∩ findall(x -> window_data_region(x) == MOB, WC)
+idxs = findall(x -> window_data_event(x).behavior.name == "Grooming", WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == "Free Roam", WC) ∩ findall(x -> window_data_region(x) == MOB, WC)
 
 dta = WC[idxs]
+ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, WC[idxs])
+spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+fl = spcs[1].flabels .* (1010.1 / 256) |> x -> round.(Int, x .* 100)
+spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
 
+fcols = ["f_$i" for i = fl]
+spcstbl = DataFrame()
+spcstbl.rat = ratname
+for i in 1:length(fcols)
+    spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
+end
+spcstbl
+
+import MixedModels as mm
+
+fm = (mm.term(:f_197) ~ mm.term(1) + (mm.term(1) | mm.term(:rat)))
+fm1 = fit(MixedModel, fm, spcstbl)
+coef(fm1)
+stderror(fm1)
+
+function mefx(x)
+    fm = (mm.term(x) ~mm.term(1) + (mm.term(1) | mm.term(:rat)))
+    fm1 = fit(MixedModel, fm, spcstbl)
+    return coef(fm1), stderror(fm1)
+end
+
+
+ms = [mefx(fc) for fc = Symbol.(fcols)]
+
+m=map(x->x[1][1], ms)|>vcat
+s=map(x->x[2][1], ms)|>vcat
+
+s
+m
 f = Figure()
 ax = Axis(f[1, 1], yscale = log10, xscale = log10, yminorticksvisible = true, yminorgridvisible = true,
     yminorticks = IntervalsBetween(8))

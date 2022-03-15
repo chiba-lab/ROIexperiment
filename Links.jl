@@ -1,11 +1,11 @@
-include("./ROIontology.jl")
+# include("./ROIontology.jl")
 
 
-ROIexp = load("./Data/ROIexp_FR.jld2", "ROIexp");
-lfp = ROIexp[:lfp_data]
-events = ROIexp[:behavioral_events]
-trials = ROIexp[:trials]
-sessions = ROIexp[:sessions]
+# ROIexp = load("./Data/ROIexp_FR.jld2", "ROIexp");
+# lfp = ROIexp[:lfp_data]
+# events = ROIexp[:behavioral_events]
+# trials = ROIexp[:trials]
+# sessions = ROIexp[:sessions]
 
 lfp_session=GMap(x->x.session, lfp)
 lfp_region=GMap(x->x.region, lfp)
@@ -59,18 +59,20 @@ window_data=GMap(Dict(zip(win[idx], d[idx])), Dict(zip(d[idx], win[idx])))
 win=collect(dom(window_data))
 function isartifact(x::DataWindow)
     if x.data.region==MOB
-        thresh=.75
-    else
         thresh=.6
+    else
+        thresh=.4
     end
-    if any(window_data(x).≥thresh)
-    # if sum((window_data(x) .≥ thresh)) > (length(window_data(x)) * .1)
+    # if any(window_data(x).≥thresh)
+    if sum((window_data(x) .≥ thresh)) > (length(window_data(x)) * .01)
         return true
     else
         return false
     end
 end
 win=filter(!isartifact, win)
+
+
 
 
 window_data=GMap(Dict(zip(win, window_data.(win))), Dict(zip(window_data.(win), win)))
