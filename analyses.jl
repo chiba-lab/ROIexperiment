@@ -9,7 +9,7 @@ include("./ROIontology.jl")
 ##==============================================================================
 #Load data
 
-ROIexp = load("./Data/ROIexp.jld2", "ROIexp");
+ROIexp = load("./Data/ROIexp_FR.jld2", "ROIexp");
 lfp = ROIexp[:lfp_data]
 events = ROIexp[:behavioral_events]
 trials = ROIexp[:trials]
@@ -22,8 +22,8 @@ include("./Links.jl")
 
 using FourierAnalysis
 
-const WD =  collect(dom(window_data))
-const WC =  collect(codom(window_data))
+WD =  collect(dom(window_data))
+WC =  collect(codom(window_data))
 # using JLD2 
 # @save "TempData/event_lfp_windows_1_1.jld2"  WC
 ##==============================================================================
@@ -38,6 +38,24 @@ pre_spec=GMap(x->spectra(x, 256, 512), wd_pre.(WC))
 peri_spec=GMap(x->spectra(x, 256, 512), wd_peri.(WC))
 post_spec=GMap(x->spectra(x, 256, 512), wd_post.(WC))
 ##==============================================================================
+
+
+using DataFrames
+spctbl = DataFrame()
+for f in pre_spec[1].flabels
+    pre_spec[i] = DataFrame(pre_spec[i], colnames = ["freq", "power"])
+end
+
+es=filter(x->agenttype(event_trial(x).condition) == Rat, events)
+
+d=inverse(window_data_event)(es[1])
+
+window_data_region.(d)
+
+
+
+
+##==============================================================================
 using Interpolations
 using CairoMakie
 using ProgressBars
@@ -47,6 +65,7 @@ dataevent="Sniff"
 
 CairoMakie.activate!(type="png")
 idxs=findall(x->window_data_event(x).behavior.name == dataevent,WC) ∩ findall(x->window_data_region(x)==dataregion,WC)
+
 f= Figure();
 axs = [Axis(f[i, j]) for i = 1:3, j=1:3]
 
