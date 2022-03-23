@@ -46,9 +46,12 @@ include("./PlotFuncs.jl")
 import SplitApplyCombine as sac
 
 using DataFrames
-import MixedModels as mm
+import MixedModels: term
+using MixedModels
 using Statistics
 using ProgressBars
+
+
 
 function fuckyouplot(ax, e, tc, r)
     # dataregion = MOB
@@ -57,11 +60,12 @@ function fuckyouplot(ax, e, tc, r)
     trial_condition = tc
     region = r
 
-    idxs = findall(x -> window_data_event(x).behavior.name == event_name, WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == trial_condition, WC) ∩ findall(x -> window_data_region(x) == region, WC)
+    idxs = findall(x -> window_data_event(x).behavior.name == event_name, WC)  ∩ findall(x -> window_data_region(x) == region, WC)
 
     g = sac.group(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
     dct = Dict([(Object, "Object"), (Rat, "Rat"), (Robot, "Robot")])
-    dcc = Dict([(Object, :red), (Rat, :green), (Robot, :blue)])
+    dcc = Dict([(Object, :red), (Rat, :green), (Robot, :blue), ("Object", :red), ("Rat", :green), ("Robot", :blue)])
+
 
 
 
@@ -69,44 +73,70 @@ function fuckyouplot(ax, e, tc, r)
     # ax = Axis(f[1, 1], xscale = log10, yscale = log10,
     #     yminorticksvisible = true, yminorgridvisible = true,
     #     yminorticks = IntervalsBetween(8))
-av=[Object, Robot, Rat]
-for k in av
+    av = ["Object", "Rat", "Robot"]
+    # for k in av
     # k = collect(keys(g))[i]
+    agent_type = map(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
+    ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, WC[idxs])
+    spcs = WC[idxs] |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+    fr = FourierAnalysis.fres(256, 512) .* (1010.1 / 256)
+    fl = collect(fr:fr:fr*256)
 
-    ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, g[k])
-    spcs = g[k] |> x -> wd_peri.(x) |> x -> peri_spec.(x)
-    fl = spcs[1].flabels .* (1010.1 / 256)
     fls = fl |> x -> round.(Int, x .* 100)
+    # uid = findfirst(x -> x > 150, fl)
+    # fl = fl[1:uid]
+
     spcs = map(x -> x.y ./ sum(x.y), spcs) |> x -> hcat(x...)
 
     fcols = ["f_$i" for i = fls]
     spcstbl = DataFrame()
     spcstbl.rat = ratname
+    spcstbl.agent_type = agent_type
     for i in 1:length(fcols)
         spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
     end
 
     function mefx(x)
-        fm = (mm.term(x) ~ mm.term(1) + (mm.term(1) | mm.term(:rat)))
+        fm = (term(x) ~ term(1) + term(:agent_type) + (term(1) | term(:rat)))
         fm1 = fit(MixedModel, fm, spcstbl)
-        return coef(fm1), stderror(fm1)
+        # return coef(fm1), stderror(fm1)
+        return fm1
     end
 
-    if length(unique(ratname)) == 1
-        m = mean(spcs, dims = 2)
-        s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
-    else
-        ms = [mefx(fc) for fc = Symbol.(fcols)]
-        m = map(x -> x[1][1], ms) |> vcat
-        s = map(x -> x[2][1], ms) |> vcat
-    end
+    # if length(unique(ratname)) == 1
+    #     m = mean(spcs, dims = 2)
+    #     s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
+    # else
+    #     ms = [mefx(fc) for fc = Symbol.(fcols)]
+    # end
+
+
+    ms = [mefx(fc) for fc = Symbol.(fcols)]
+
 
 
     # errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
-    lines!(ax, fl, vec(m), label = dct[k], color = dcc[k]; linewidth = 2)
-    band!(ax, fl, vec(m) - vec(s), vec(m) + vec(s), color = (dcc[k], 0.4))
-    xlims!(ax, fl[1], 150)
-end
+    for nm in av
+    
+        # m = map(x -> x[1][k], ms) |> vcat
+        # s = map(x -> x[2][k], ms) |> vcat
+        # nms=split()
+        k = findfirst(x -> x == nm, map(x -> x[2], split.(fixefnames(ms[1])[2:end], ": ")))
+    
+        m = map(x -> x.beta[k], ms)
+        s = map(x -> x.stderror[k], ms)
+       
+    
+        lines!(ax, fl, max.(m, 0.0001), label = nm, color = dcc[nm]; linewidth = 2)
+        # axislegend(ax)
+        band!(ax, fl, max.(m .- s, 0.0001), m .+ s, color = (dcc[nm], 0.4))
+        xlims!(ax, fl[1], 50)
+        ylims!(ax, 0.001, 1)
+        ax.xticks = ([5, 10, 25, 45], ["5", "10", "25", "45"])
+    
+    
+    end
+    # end
     # fl = spcs[1].flabels .* 1010.1 / 256
     # xlims!(fl[1], 120)
     # f[1, 2] = Legend(f, ax, "Agent")
@@ -120,15 +150,19 @@ end
 dcn = Dict([(AMG, "Amygdala"), (MOB, "MOB"), (CA2, "CA")])
 
 f = Figure();
-axs = [Axis(f[i, j], xscale = log10, yscale = log10, yminorticksvisible = true, yminorgridvisible = true, yminorticks = IntervalsBetween(8)) for i = 1:3, j = 1:3]
+axs = [Axis(f[i, j], yscale = log10, xscale = log10, yminorticksvisible = true, yminorgridvisible = true) for i = 1:3, j = 1:3]
 cnt = 1
 for e in tqdm(["Grooming", "Rearing", "Immobility"])
     for tc in ["Free Roam"]
         for r in [MOB, CA2, AMG]
             fuckyouplot(axs[cnt], e, tc, r)
-            # if r == MOB
-            #     axs[cnt].title = "\b$e"
-            # else
+            if e == "Grooming"
+                axs[cnt].ylabel = "Amp (log10)"
+            end
+            if r == AMG
+                axs[cnt].xlabel = "Freq (Hz)"
+            end
+
             #     # axs[cnt].title = "$(dcn[r])"
             # end
             # axs[cnt].title = "$(dcn[r]), $e"
@@ -139,12 +173,15 @@ for e in tqdm(["Grooming", "Rearing", "Immobility"])
             #     axs[cnt].xlabel = "Freq (Hz)"
             # end
             cnt = cnt + 1
+
         end
     end
 end
 
 f
-save("./TempData/MeanSpecs/allspecs_corrected.png", f)
+# xlims!(ax, fl[1], 150)
+#
+save("./TempData/MeanSpecs/allspecs_corrected_50.png", f)
 ##==============================================================================
 # f = Figure();
 # ax = Axis(f[1, 1], yscale = log10,
@@ -183,6 +220,7 @@ idxs = findall(x -> window_data_event(x).behavior.name == "Grooming", WC) ∩ fi
 
 dta = WC[idxs]
 ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, WC[idxs])
+agent_type = map(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
 spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
 fl = spcs[1].flabels .* (1010.1 / 256) |> x -> round.(Int, x .* 100)
 spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
@@ -190,6 +228,7 @@ spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
 fcols = ["f_$i" for i = fl]
 spcstbl = DataFrame()
 spcstbl.rat = ratname
+spcstbl.agent_type = agent_type
 for i in 1:length(fcols)
     spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
 end
@@ -197,22 +236,25 @@ spcstbl
 
 import MixedModels as mm
 
-fm = (mm.term(:f_197) ~ mm.term(1) + (mm.term(1) | mm.term(:rat)))
-fm1 = fit(MixedModel, fm, spcstbl)
+fm = (mm.term(:f_197) ~  mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
+fm1 = fit(MixedModel, fm, spcstbl, contrasts = Dict(:agent_type => fulldummy()))
 coef(fm1)
 stderror(fm1)
 
+
+
 function mefx(x)
-    fm = (mm.term(x) ~mm.term(1) + (mm.term(1) | mm.term(:rat)))
+    fm = (mm.term(x) ~ mm.term(0) + mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
     fm1 = fit(MixedModel, fm, spcstbl)
     return coef(fm1), stderror(fm1)
 end
 
 
+
 ms = [mefx(fc) for fc = Symbol.(fcols)]
 
-m=map(x->x[1][1], ms)|>vcat
-s=map(x->x[2][1], ms)|>vcat
+m = map(x -> x[1][2], ms) |> vcat
+s = map(x -> x[2][2], ms) |> vcat
 
 s
 m
