@@ -178,7 +178,7 @@ for e in tqdm(["Grooming", "Rearing", "Immobility"])
     end
 end
 
-f
+# f
 # xlims!(ax, fl[1], 150)
 #
 save("./TempData/MeanSpecs/allspecs_corrected_50.png", f)
@@ -209,72 +209,72 @@ save("./TempData/MeanSpecs/allspecs_corrected_50.png", f)
 # ax.xlabel = "Amp"
 # f
 ##
-using CairoMakie
-include("./PlotFuncs.jl")
+# using CairoMakie
+# include("./PlotFuncs.jl")
 
 
-using Statistics
-using DataFrames
+# using Statistics
+# using DataFrames
 
-idxs = findall(x -> window_data_event(x).behavior.name == "Grooming", WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == "Free Roam", WC) ∩ findall(x -> window_data_region(x) == MOB, WC)
+# idxs = findall(x -> window_data_event(x).behavior.name == "Grooming", WC) ∩ findall(x -> event_trial(window_data_event(x)).condition.name == "Free Roam", WC) ∩ findall(x -> window_data_region(x) == MOB, WC)
 
-dta = WC[idxs]
-ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, WC[idxs])
-agent_type = map(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
-spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
-fl = spcs[1].flabels .* (1010.1 / 256) |> x -> round.(Int, x .* 100)
-spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
+# dta = WC[idxs]
+# ratname = map(x -> window_lfp(inv(window_data)(x)).rat.name, WC[idxs])
+# agent_type = map(x -> agenttype(event_trial(window_data_event(x)).condition), WC[idxs])
+# spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+# fl = spcs[1].flabels .* (1010.1 / 256) |> x -> round.(Int, x .* 100)
+# spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
 
-fcols = ["f_$i" for i = fl]
-spcstbl = DataFrame()
-spcstbl.rat = ratname
-spcstbl.agent_type = agent_type
-for i in 1:length(fcols)
-    spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
-end
-spcstbl
+# fcols = ["f_$i" for i = fl]
+# spcstbl = DataFrame()
+# spcstbl.rat = ratname
+# spcstbl.agent_type = agent_type
+# for i in 1:length(fcols)
+#     spcstbl[!, Symbol(fcols[i])] = spcs[i, :]
+# end
+# spcstbl
 
-import MixedModels as mm
+# import MixedModels as mm
 
-fm = (mm.term(:f_197) ~  mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
-fm1 = fit(MixedModel, fm, spcstbl, contrasts = Dict(:agent_type => fulldummy()))
-coef(fm1)
-stderror(fm1)
-
-
-
-function mefx(x)
-    fm = (mm.term(x) ~ mm.term(0) + mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
-    fm1 = fit(MixedModel, fm, spcstbl)
-    return coef(fm1), stderror(fm1)
-end
+# fm = (mm.term(:f_197) ~  mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
+# fm1 = fit(MixedModel, fm, spcstbl, contrasts = Dict(:agent_type => fulldummy()))
+# coef(fm1)
+# stderror(fm1)
 
 
 
-ms = [mefx(fc) for fc = Symbol.(fcols)]
-
-m = map(x -> x[1][2], ms) |> vcat
-s = map(x -> x[2][2], ms) |> vcat
-
-s
-m
-f = Figure()
-ax = Axis(f[1, 1], yscale = log10, xscale = log10, yminorticksvisible = true, yminorgridvisible = true,
-    yminorticks = IntervalsBetween(8))
+# function mefx(x)
+#     fm = (mm.term(x) ~ mm.term(0) + mm.term(:agent_type) + (mm.term(1) | mm.term(:rat)))
+#     fm1 = fit(MixedModel, fm, spcstbl)
+#     return coef(fm1), stderror(fm1)
+# end
 
 
 
-spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
-fl = spcs[1].flabels * 1010.1 / 128
-spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
-m = mean(spcs, dims = 2)
-s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
-# errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
-lines!(fl, vec(m); linewidth = 2)
+# ms = [mefx(fc) for fc = Symbol.(fcols)]
 
-f
-# f[1, 2] = Legend(f, ax, "Agent")
-# ax.xlabel = "Freq (Hz)"
-# ax.ylabel = "Amp"
-# ax.title = "Condition:$trial_condition, Event:$event_name, Region:$(region.name)"
-# save("./Mean specs/$(trial_condition)_$(event_name)_$(region.name).png", f)
+# m = map(x -> x[1][2], ms) |> vcat
+# s = map(x -> x[2][2], ms) |> vcat
+
+# s
+# m
+# f = Figure()
+# ax = Axis(f[1, 1], yscale = log10, xscale = log10, yminorticksvisible = true, yminorgridvisible = true,
+#     yminorticks = IntervalsBetween(8))
+
+
+
+# spcs = dta |> x -> wd_peri.(x) |> x -> peri_spec.(x)
+# fl = spcs[1].flabels * 1010.1 / 128
+# spcs = map(x -> x.y, spcs) |> x -> hcat(x...)
+# m = mean(spcs, dims = 2)
+# s = std(spcs, dims = 2) / sqrt(size(spcs, 2))
+# # errorbars!(ax, fl, vec(m), vec(s); linewidth = 2, label = k)
+# lines!(fl, vec(m); linewidth = 2)
+
+# f
+# # f[1, 2] = Legend(f, ax, "Agent")
+# # ax.xlabel = "Freq (Hz)"
+# # ax.ylabel = "Amp"
+# # ax.title = "Condition:$trial_condition, Event:$event_name, Region:$(region.name)"
+# # save("./Mean specs/$(trial_condition)_$(event_name)_$(region.name).png", f)

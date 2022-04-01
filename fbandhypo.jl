@@ -5,7 +5,7 @@ include("./ROIontology.jl")
 ##==============================================================================
 #Load data
 
-ROIexp = load("./Data/ROIexp.jld2", "ROIexp");
+ROIexp = load("./Data/ROIexp_FR.jld2", "ROIexp");
 lfp = ROIexp[:lfp_data]
 events = ROIexp[:behavioral_events]
 trials = ROIexp[:trials]

@@ -1,5 +1,5 @@
 using TypedTables, Unitful, Dates, Parameters, Glob, CSV, StructArrays, JLD2, IntervalSets, AutoHashEquals, Associates
-import FourierAnalysis as FA
+# import FourierAnalysis as FA
 # import Unitful: Hz, s as 𝓈
 
 
@@ -57,6 +57,7 @@ const OF(T) = TrialCondition{T}("Open Field")
 const FR(T) = TrialCondition{T}("Free Roam")
 const HBT(T) = TrialCondition{T}("Habituation")
 const ITR(T) = TrialCondition{T}("Interaction")
+const EMPTY(T) = TrialCondition{T}("Empty")
 
 #Behaviors 
 @auto_hash_equals struct Behavior
@@ -100,6 +101,7 @@ struct Trial <: ObservationInterval
     start_time
     end_time
     condition
+
 end
 
 
@@ -115,7 +117,7 @@ struct BehavioralEvent <: ObservationData
     behavior
     actor
     receiver
-    condition
+    
 end
 
 struct LFPRecording <: ObservationData

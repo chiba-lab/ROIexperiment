@@ -26,6 +26,7 @@ event_behavior=GMap(x->x.behavior, events)
 event_actor=GMap(x->x.actor, events)
 event_reciever=GMap(x->x.receiver, events)
 
+
 event_trial_dict=Dict{BehavioralEvent, Trial}()
 for e in events
     t=filter(x->event_coord(e)⊆trial_coord(x), trials)
@@ -64,7 +65,7 @@ function isartifact(x::DataWindow)
         thresh=.4
     end
     # if any(window_data(x).≥thresh)
-    if sum((window_data(x) .≥ thresh)) > (length(window_data(x)) * .01)
+    if sum((window_data(x) .≥ thresh)) > (length(window_data(x)) * .005)
         return true
     else
         return false
@@ -72,9 +73,7 @@ function isartifact(x::DataWindow)
 end
 win=filter(!isartifact, win)
 
-
-
-
 window_data=GMap(Dict(zip(win, window_data.(win))), Dict(zip(window_data.(win), win)))
 window_data_event=GMap(x->inverse(event_lfp_window)(inverse(window_data)(x)), collect(codom(window_data)))
 window_data_region=GMap(x->inverse(window_data)(x).data.region, collect(codom(window_data)))
+
