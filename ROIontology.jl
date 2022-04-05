@@ -101,7 +101,7 @@ struct Trial <: ObservationInterval
     start_time
     end_time
     condition
-
+    agents
 end
 
 
@@ -117,7 +117,6 @@ struct BehavioralEvent <: ObservationData
     behavior
     actor
     receiver
-    
 end
 
 struct LFPRecording <: ObservationData

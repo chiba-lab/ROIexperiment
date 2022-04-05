@@ -18,6 +18,8 @@ trial_coord=GMap(x->(trial_session(x), trial_time(x)), trials)
 trial_condition=GMap(x->x.condition, trials)
 trial_condition_name=GMap(x->x.condition.name, trials)
 trial_condition_agenttype=GMap(x->agenttype(x.condition), trials)
+trial_agents=GMap(x->x.agents, trials)
+
 
 event_session=GMap(x->x.session, events)
 event_time=GMap(x->time_interval(x), events)
