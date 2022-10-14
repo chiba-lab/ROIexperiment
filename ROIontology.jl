@@ -32,6 +32,7 @@ end
     name
 end
 
+
 agenttypename(x::Rat) = "Rat"
 agenttypename(x::Robot) = "Robot"
 agenttypename(x::Object) = "Object"

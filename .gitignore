@@ -5,3 +5,6 @@ TempData
 sysimindicator.jl
 pre_comp_trace.jl
 JuliaSysimage.so
+dadpdfextract.jl
+RandomFigs
+PACplots
